@@ -1,10 +1,17 @@
 #pragma once
 
 #include <iostream>
-#include <cstdio>
+#include <cstdint>
 
-void printHex(std::ostream& out, uint16_t r);
+namespace Z80CPP {
 
 class Printer {
-   
+   std::ostream& m_out;
+
+public:   
+   Printer(std::ostream& out) : m_out(out) {};
+
+   std::ostream& printRegister(const char* name, uint16_t value);
 };
+
+}; // Namespace Z80CPP

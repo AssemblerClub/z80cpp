@@ -3,8 +3,8 @@
 #include <Z80.hpp>
 
 class Computer {
-   Z80      m_cpu;
-   Memory   m_mem = Memory(4096);
+   Z80CPP::Z80      m_cpu;
+   Z80CPP::Memory   m_mem = Z80CPP::Memory(4096);
 
 public:
    Computer() {
@@ -16,9 +16,9 @@ public:
       ++cycles;
       while (--cycles) {
          m_cpu.tick();
-         if        ( !m_cpu.signal(Signal::RD) ) {
+         if        ( !m_cpu.signal(Z80CPP::Signal::RD) ) {
             m_cpu.setData( m_mem[ m_cpu.address() ] );
-         } else if ( !m_cpu.signal(Signal::WR) ) {
+         } else if ( !m_cpu.signal(Z80CPP::Signal::WR) ) {
             m_mem[ m_cpu.address() ] = m_cpu.data();
          }
          m_cpu.print(std::cout);

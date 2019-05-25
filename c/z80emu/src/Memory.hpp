@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstring>
 
+namespace Z80CPP {
+
 class Memory {
    std::unique_ptr<uint8_t[]> m_bytes;    // Raw Memory Bytes
    uint32_t m_size = 0;                   // Size of the memory
@@ -22,3 +24,5 @@ public:
       return m_bytes[pos];
    }
 };
+
+}; // Namespace Z80CPP

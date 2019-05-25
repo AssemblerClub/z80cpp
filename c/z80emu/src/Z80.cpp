@@ -1,1 +1,68 @@
 #include <Z80.hpp>
+#include <bitset>
+#include <Printer.hpp>
+
+namespace Z80CPP {
+
+void 
+Z80::read_mem_from_PC() {
+   rstSignal(Signal::MREQ);
+   rstSignal(Signal::RD);
+   m_address = m_reg.PC;      
+}
+
+void 
+Z80::fetch() {
+   std::cout << "Fetch\n";
+   read_mem_from_PC();
+   ++m_reg.PC;
+}
+
+void 
+Z80::decode() {
+   std::cout << "Decode\n";
+   m_reg.IR = m_data;
+   switch(m_data) {
+      case 0x3E: std::cout << "LDA!\n"; break;
+      default:   std::cout << (uint16_t)m_data << "\n";
+   }
+   read_mem_from_PC(); ++m_reg.PC;
+}
+
+void 
+Z80::execute() {
+   std::cout << "Execute\n";
+   switch(m_reg.IR) {
+      case 0x3E: m_reg.A = m_data; break;
+   }
+}
+
+void 
+Z80::tick() {
+   static uint8_t o = 0;
+   using TFun = decltype(&Z80::fetch);
+   const uint8_t numops = 3;
+   const TFun ops[numops] = { &Z80::fetch, &Z80::decode, &Z80::execute };
+
+      m_signals = 0xFF;    // Reset Signals
+      (this->*ops[o])();   // Tick
+      o = ++o % numops;    // Select next operation
+   }
+
+void 
+Z80::print(std::ostream& out) const {
+   Printer p(out);
+   auto pr = [&p](const char*n, uint16_t r) { p.printRegister(n, r); };
+   
+   pr("AF", m_reg.AF); pr("AF'", m_reg.AF); out << "\n";
+   pr("BC", m_reg.BC); pr("BC'", m_reg.BC); out << "\n";
+   pr("DE", m_reg.DE); pr("DE'", m_reg.DE); out << "\n";
+   pr("HL", m_reg.HL); pr("HL'", m_reg.HL); out << "\n";
+   pr("IX", m_reg.IX); pr("IY ", m_reg.IY); out << "\n";
+   pr("PC", m_reg.PC); pr("SP ", m_reg.SP); out << "\n";
+   pr(" I", m_reg.I ); pr(" R ", m_reg.R ); out << "\n";
+   pr("IR", m_reg.IR); out << "\n";
+   out << "Signals{"<< std::bitset<8>((uint16_t)m_signals) << "}\n";
+}
+
+}; // Namespace Z80CPP
