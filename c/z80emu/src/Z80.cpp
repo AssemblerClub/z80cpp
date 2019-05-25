@@ -5,16 +5,11 @@
 namespace Z80CPP {
 
 void 
-Z80::read_mem_from_PC() {
+Z80::fetch() {
    rstSignal(Signal::MREQ);
    rstSignal(Signal::RD);
+   rstSignal(Signal::M1);
    m_address = m_reg.PC;      
-}
-
-void 
-Z80::fetch() {
-   std::cout << "Fetch\n";
-   read_mem_from_PC();
    ++m_reg.PC;
 }
 
@@ -22,12 +17,17 @@ void
 Z80::decode() {
    std::cout << "Decode\n";
    m_reg.IR = m_data;
-   switch(m_data) {
-      case 0x3E: std::cout << "LDA!\n"; break;
-      default:   std::cout << (uint16_t)m_data << "\n";
+
+   // Check first 2 bits from Opcode
+   uint8_t op = m_reg.IR & 0xC0;
+   switch( m_reg.IR ) {
+      case 0x3E: fetch(); break;
    }
-   read_mem_from_PC(); ++m_reg.PC;
 }
+
+//|         M1           |      M2           |
+//             | REFRESH |            
+//| MREQ | DIN | DEC | W | MREQ | DIN | EXEC | 
 
 void 
 Z80::execute() {
@@ -37,17 +37,23 @@ Z80::execute() {
    }
 }
 
+void
+Z80::wait() {
+   std::cout << "Waiting for memory\n";
+}
+
 void 
 Z80::tick() {
    static uint8_t o = 0;
    using TFun = decltype(&Z80::fetch);
-   const uint8_t numops = 3;
-   const TFun ops[numops] = { &Z80::fetch, &Z80::decode, &Z80::execute };
+   const uint8_t numops = 4;
+   const TFun ops[numops] = { &Z80::fetch, &Z80::wait, &Z80::decode, &Z80::execute };
 
-      m_signals = 0xFF;    // Reset Signals
-      (this->*ops[o])();   // Tick
-      o = ++o % numops;    // Select next operation
-   }
+   m_signals = 0xFF;    // Reset Signals
+   (this->*ops[o])();   // Tick
+   o = ++o % numops;    // Select next operation
+   ++m_ticks;           // One tick more
+}
 
 void 
 Z80::print(std::ostream& out) const {
@@ -64,6 +70,7 @@ Z80::print(std::ostream& out) const {
    pr("WZ", (m_reg.W << 8) | m_reg.Z);
    pr("IR ",     m_reg.IR); out << "\n";
    out << "Signals{"<< std::bitset<8>((uint16_t)m_signals) << "}\n";
+   out << "Ticks: " << std::dec << m_ticks << "\n";
 }
 
 }; // Namespace Z80CPP

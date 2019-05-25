@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include <cstring>
+#include <vector>
 
 namespace Z80CPP {
 
@@ -42,14 +43,24 @@ enum class Signal : uint16_t {
       MREQ  = 0x80
    ,  RD    = 0x40
    ,  WR    = 0x20
+   ,  M1    = 0x10
 };
 
 class Z80 {
-   Registers m_reg;          // Register Banks
-   uint16_t m_signals = 0xFF;// Signal pins information
-   uint16_t m_address = 0;   // Address Bus information
-   uint8_t  m_data    = 0;   // Data Bus information 
+   // Member variables
+   Registers   m_reg;            // Register Banks
+   uint16_t    m_signals = 0xFF; // Signal pins information
+   uint16_t    m_address = 0;    // Address Bus information
+   uint8_t     m_data    = 0;    // Data Bus information 
+   uint8_t     m_tstate  = 0;    // T-state of current execution
+   uint64_t    m_ticks   = 0;    // Total ticks of operation transcurred
 
+   void  fetch();
+   void  wait();
+   void  decode();
+   void  execute();
+
+   void  LD_r_n();
 public:
    void     setData(uint8_t in)  { m_data = in; }
    void     setSignal(Signal s)  { m_signals |=  (uint16_t)s; }
@@ -59,10 +70,6 @@ public:
    uint16_t address()            { return m_address; }
    //Registers& reg()              { return m_reg; }
 
-   void read_mem_from_PC();
-   void fetch();
-   void decode();
-   void execute();
    void tick();
    void print(std::ostream& out) const;
 };
