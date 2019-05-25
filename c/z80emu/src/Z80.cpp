@@ -33,7 +33,7 @@ void
 Z80::execute() {
    std::cout << "Execute\n";
    switch(m_reg.IR) {
-      case 0x3E: m_reg.A = m_data; break;
+      case 0x3E: m_reg.main.A = m_data; break;
    }
 }
 
@@ -54,14 +54,15 @@ Z80::print(std::ostream& out) const {
    Printer p(out);
    auto pr = [&p](const char*n, uint16_t r) { p.printRegister(n, r); };
    
-   pr("AF", m_reg.AF); pr("AF'", m_reg.AF); out << "\n";
-   pr("BC", m_reg.BC); pr("BC'", m_reg.BC); out << "\n";
-   pr("DE", m_reg.DE); pr("DE'", m_reg.DE); out << "\n";
-   pr("HL", m_reg.HL); pr("HL'", m_reg.HL); out << "\n";
-   pr("IX", m_reg.IX); pr("IY ", m_reg.IY); out << "\n";
-   pr("PC", m_reg.PC); pr("SP ", m_reg.SP); out << "\n";
-   pr(" I", m_reg.I ); pr(" R ", m_reg.R ); out << "\n";
-   pr("IR", m_reg.IR); out << "\n";
+   pr("AF", m_reg.main.AF); pr("AF'", m_reg.alt.AF); out << "\n";
+   pr("BC", m_reg.main.BC); pr("BC'", m_reg.alt.BC); out << "\n";
+   pr("DE", m_reg.main.DE); pr("DE'", m_reg.alt.DE); out << "\n";
+   pr("HL", m_reg.main.HL); pr("HL'", m_reg.alt.HL); out << "\n";
+   pr("IX",      m_reg.IX); pr("IY ",     m_reg.IY); out << "\n";
+   pr("PC",      m_reg.PC); pr("SP ",     m_reg.SP); out << "\n";
+   pr(" I",      m_reg.I ); pr(" R ",     m_reg.R ); out << "\n";
+   pr("WZ", (m_reg.W << 8) | m_reg.Z);
+   pr("IR ",     m_reg.IR); out << "\n";
    out << "Signals{"<< std::bitset<8>((uint16_t)m_signals) << "}\n";
 }
 

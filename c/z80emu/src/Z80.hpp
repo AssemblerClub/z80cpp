@@ -17,22 +17,25 @@ namespace Z80CPP {
 #endif
 
 struct Registers {
-   REGPAIR(AF, A, F);
-   REGPAIR(BC, B, C);
-   REGPAIR(DE, D, E);
-   REGPAIR(HL, H, L);
-   REGPAIR(AFp, Ap, Fp);
-   REGPAIR(BCp, Bp, Cp);
-   REGPAIR(DEp, Dp, Ep);
-   REGPAIR(HLp, Hp, Lp);
+   struct {
+      REGPAIR(AF, A, F);
+      REGPAIR(BC, B, C);
+      REGPAIR(DE, D, E);
+      REGPAIR(HL, H, L);
+   } main;
+   struct {
+      REGPAIR(AF, A, F);
+      REGPAIR(BC, B, C);
+      REGPAIR(DE, D, E);
+      REGPAIR(HL, H, L);
+   } alt;
    REGPAIR(IX, IXh, IXl);
    REGPAIR(IY, IYh, IYl);
    uint16_t PC, SP;
-   uint8_t  I, R, IR;
-   Registers() 
-      :  AF(0),AFp(0),BC(0),BCp(0),DE(0),DEp(0),HL(0),HLp(0)
-        ,IX(0),IY(0),PC(0),SP(0),I(0),R(0),IR(0)
-   {}
+   uint8_t  I, R, W, Z, IR;
+   Registers() {
+      std::memset(this, 0, sizeof(Registers));
+   }
 };
 
 enum class Signal : uint16_t {
