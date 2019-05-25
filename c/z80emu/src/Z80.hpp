@@ -1,10 +1,11 @@
+#pragma once
+
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
-#include <memory>
 #include <cstring>
 #include <bitset>
-
+#include <Printer.hpp>
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN 
    #define REGPAIR(NAME, HI, LO) \
@@ -15,10 +16,6 @@
       union { uint16_t NAME; \
               struct{ uint8_t HI, LO; }; }
 #endif
-
-void printHex(std::ostream& out, uint16_t r) {
-   out << std::hex << std::setw(4) << std::setfill('0') << r;
-}
 
 struct Registers {
    REGPAIR(AF, A, F);
@@ -46,8 +43,6 @@ enum class Signal : uint16_t {
 };
 
 class Z80 {
-
-
    Registers m_reg;          // Register Banks
    uint16_t m_signals = 0xFF;// Signal pins information
    uint16_t m_address = 0;   // Address Bus information
@@ -114,56 +109,3 @@ public:
       out << "Signals{"<< std::bitset<8>((uint16_t)m_signals) << "}\n";
    }
 };
-
-class Memory {
-   std::unique_ptr<uint8_t[]> m_bytes;    // Raw Memory Bytes
-   uint32_t m_size = 0;                   // Size of the memory
-
-public:
-   Memory(uint32_t size) : m_size(size) {
-      m_bytes = std::make_unique<uint8_t[]>(size);
-   }
-
-   void fill(uint8_t v) {
-      std::memset(m_bytes.get(), v, m_size);
-   }
-
-   uint8_t& operator[](uint32_t pos) {
-      if (pos > m_size) throw std::out_of_range("Requested memory location is out of range\n");
-      return m_bytes[pos];
-   }
-};
-
-class Computer {
-   Z80      m_cpu;
-   Memory   m_mem = Memory(4096);
-
-public:
-   Computer() {
-      uint8_t program[6] = { 0x3E, 0x11, 0x3E, 0xF5, 0x3E, 0x3E };
-      std::memcpy(&m_mem[0], program, 6);
-   }
-
-   void run(uint16_t cycles) {
-      ++cycles;
-      while (--cycles) {
-         m_cpu.tick();
-         if        ( !m_cpu.signal(Signal::RD) ) {
-            m_cpu.setData( m_mem[ m_cpu.address() ] );
-         } else if ( !m_cpu.signal(Signal::WR) ) {
-            m_mem[ m_cpu.address() ] = m_cpu.data();
-         }
-         m_cpu.print(std::cout);
-         uint8_t a;
-         std::cin >> a;
-      } 
-   }
-};
-
-
-int main() {
-   Computer K;
-   K.run(9);
-
-   return 0;
-}
