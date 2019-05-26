@@ -15,15 +15,15 @@ public:
    void run(uint16_t cycles) {
       ++cycles;
       while (--cycles) {
+         m_cpu.print(std::cout);
+         uint8_t a;
+         std::cin >> a;
          m_cpu.tick();
          if        ( !m_cpu.signal(Z80CPP::Signal::RD) ) {
             m_cpu.setData( m_mem[ m_cpu.address() ] );
          } else if ( !m_cpu.signal(Z80CPP::Signal::WR) ) {
             m_mem[ m_cpu.address() ] = m_cpu.data();
          }
-         m_cpu.print(std::cout);
-         uint8_t a;
-         std::cin >> a;
       } 
    }
 };
@@ -31,7 +31,7 @@ public:
 
 int main() {
    Computer K;
-   K.run(9);
+   K.run(7*3+1);
 
    return 0;
 }
