@@ -34,6 +34,11 @@ Z80::Z80() {
       ,  {  .signals = &MS_MREQ_WR     } 
       ,  {  .signals = &MS_NOSIGNAL    } 
    }};
+   // 8-bit registers in their order with respect to opcodes
+   m_REGS8 = {{
+         &m_reg.main.B, &m_reg.main.C, &m_reg.main.D, &m_reg.main.E
+      ,  &m_reg.main.H, &m_reg.main.L,       nullptr, &m_reg.main.A
+   }};
 }
 
 void
@@ -48,22 +53,63 @@ Z80::process_tstate (const TState& t) {
 void Z80::fetch()                { ++m_reg.PC;              }
 void Z80::data_in(uint8_t& reg)  { reg = m_data;            }
 void Z80::data_in_A()            { data_in(m_reg.main.A);   }
+void Z80::data_in_B()            { data_in(m_reg.main.B);   }
+void Z80::data_in_C()            { data_in(m_reg.main.C);   }
+void Z80::data_in_D()            { data_in(m_reg.main.D);   }
+void Z80::data_in_E()            { data_in(m_reg.main.E);   }
+void Z80::data_in_H()            { data_in(m_reg.main.H);   }
+void Z80::data_in_L()            { data_in(m_reg.main.L);   }
 void Z80::data_in_W()            { data_in(m_reg.W);        }
 void Z80::data_in_Z()            { data_in(m_reg.Z);        }
 void Z80::data_in_IR()           { data_in(m_reg.IR);       }
 
+void 
+Z80::exe_LD_r_N(TZ80Op op) {
+   auto states = m_MRD;
+   states[2].op = op;
+   for(auto& t : states) m_ops.add(t);
+}
+
+void
+Z80::exe_LD_r_r(uint8_t opcode) {
+   uint8_t* rd = m_REGS8[ (opcode & 0x38) >> 3 ];
+   uint8_t* rs = m_REGS8[ (opcode & 0x07)      ];
+   if (!rd) {
+      if (!rs) std::cout << "HALT\n";
+      else     std::cout << "LD (HL), r\n";
+   } else if (!rs) {
+      std::cout << "LD r, (HL)\n";
+   } else {
+      std::cout << "LD r, r\n";
+      *rd = *rs;         
+   }
+}
+
+void 
+Z80::exe_LD_sRRs_N(uint16_t& reg) {
+   exe_LD_r_N(&Z80::data_in_W);
+   auto states = m_MWR;
+   states[0].addr = &reg;
+   states[0].data = &m_reg.W;
+   for(auto& t : states) m_ops.add(t);
+}
 
 void 
 Z80::decode() {
-   std::cout << "Decode\n";
+   std::cout << "Decode: ";
 
-   // Check first 2 bits from Opcode
+   // Is a 8-bit R-R Load?
+   if ( (m_reg.IR & 0xC0) == 0x40) exe_LD_r_r(m_reg.IR);
+
    switch( m_reg.IR ) {
-      case 0x3E: 
-         auto ldAN = m_MRD;
-         ldAN[2].op = &Z80::data_in_A;
-         for(auto& t : ldAN) m_ops.add(t);
-      break;
+      case 0x06: exe_LD_r_N(&Z80::data_in_B);  std::cout<<"LD B,n\n";   break;
+      case 0x0E: exe_LD_r_N(&Z80::data_in_C);  std::cout<<"LD C,n\n";   break;
+      case 0x16: exe_LD_r_N(&Z80::data_in_D);  std::cout<<"LD D,n\n";   break;
+      case 0x1E: exe_LD_r_N(&Z80::data_in_E);  std::cout<<"LD E,n\n";   break;
+      case 0x26: exe_LD_r_N(&Z80::data_in_H);  std::cout<<"LD H,n\n";   break;
+      case 0x2E: exe_LD_r_N(&Z80::data_in_L);  std::cout<<"LD L,n\n";   break;
+      case 0x36: exe_LD_sRRs_N(m_reg.main.HL); std::cout<<"LD (HL),n\n";break;
+      case 0x3E: exe_LD_r_N(&Z80::data_in_A);  std::cout<<"LD A,n\n";   break;
    }
 }
 
@@ -91,19 +137,6 @@ Z80::tick() {
    ++m_ticks;
 }
 
-//void 
-//Z80::tick() {
-//   static uint8_t o = 0;
-//   using TFun = decltype(&Z80::fetch);
-//   const uint8_t numops = 4;
-//   const TFun ops[numops] = { &Z80::fetch, &Z80::wait, &Z80::decode, &Z80::execute };
-//
-//   m_signals = 0xFF;    // Reset Signals
-//   (this->*ops[o])();   // Tick
-//   o = ++o % numops;    // Select next operation
-//   ++m_ticks;           // One tick more
-//}
-
 void 
 Z80::print(std::ostream& out) const {
    Printer p(out);
@@ -119,7 +152,8 @@ Z80::print(std::ostream& out) const {
    pr(" I",      m_reg.I ); pr(" R ",     m_reg.R ); out << "\n";
    pr("WZ", (m_reg.W << 8) | m_reg.Z);
    pr("IR ",     m_reg.IR); out << "\n";
-   out << "Signals |"<< std::bitset<16>((uint16_t)m_signals);
+   //out << "Signals |"<< std::bitset<16>((uint16_t)m_signals); // <<< This Allocs!
+   out << "Signals:";
    if (! (m_signals & (uint16_t)Signal::MREQ)) out << "|MREQ";
    if (! (m_signals & (uint16_t)Signal::RD))   out << "|RD";
    if (! (m_signals & (uint16_t)Signal::WR))   out << "|WR";

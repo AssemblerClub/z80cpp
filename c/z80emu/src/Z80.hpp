@@ -17,6 +17,9 @@ namespace Z80CPP {
               struct{ uint8_t HI, LO; }; }
 #endif
 
+//
+// Declares a struct with all Z80 Registers
+//
 struct Registers {
    struct {
       REGPAIR(AF, A, F);
@@ -40,25 +43,40 @@ struct Registers {
    }
 };
 
+//
+// Signal: Defines an individual Z80 signal 
+//  (the state of one of the pins)
+//
 enum class Signal : uint16_t {
-      MREQ  = 0x8000
-   ,  RD    = 0x4000
-   ,  WR    = 0x2000
-   ,  M1    = 0x1000
-   ,  RFSH  = 0x0800
-   ,  WAIT  = 0x0400
+      M1    = 0x8000
+   ,  MREQ  = 0x4000
+   ,  IORQ  = 0x2000
+   ,  RD    = 0x1000
+   ,  WR    = 0x0800
+   ,  RFSH  = 0x0400
+   ,  HALT  = 0x0200
+   ,  WAIT  = 0x0100
 };
 
+//
+// TState: Status of the Z80 after a given TState
+//   It defines how pinouts should be, and an operation
+//   to be performed
+//
 class Z80;
+using TZ80Op = void(Z80::*)();
 struct TState {
-   using TOp = void(Z80::*)();
    const uint16_t* signals = nullptr;
    const uint16_t* addr    = nullptr; 
    const uint8_t*  data    = nullptr;
    const uint8_t*  io      = nullptr;
-             TOp   op      = nullptr;
+          TZ80Op   op      = nullptr;
 };
 
+//
+// TVecOps: Class for encapsulating a fixed-length 
+// vector of pending operations (t-states) to perform
+//
 class TVecOps {
    static constexpr uint8_t length = 16;
    std::array<TState, length> ops;
@@ -73,6 +91,9 @@ public:
    bool           empty()  { return next == last;                 }
 };
 
+//
+// Z80 CPU Class Declaration
+//
 class Z80 {
    // Type aliases
    using TStateArr4 = std::array<TState, 4>;
@@ -88,6 +109,7 @@ class Z80 {
    TVecOps    m_ops;             // Queue of pending operations
    TStateArr4 m_M1;              // Array containing the 4 states of default M1 Machine cycle
    TStateArr3 m_MRD, m_MWR;      // Array containing the 3 states of default MREAD/MWRITE Machine cycle
+   std::array<uint8_t*, 8> m_REGS8;   // 8-bit Register order with respect to Opcode bits
 
    // Member constants
 
@@ -99,6 +121,7 @@ class Z80 {
    static const uint16_t MS_MREQ_RD_M1;
    static const uint16_t MS_MREQ_RFSH;
    static const uint16_t MS_RFSH;
+
    
    // Private member functions
 
@@ -106,14 +129,21 @@ class Z80 {
    void  wait();
    void  decode();
    void  process_tstate (const TState& t);
-
    void  data_in(uint8_t& reg);
    void  data_in_A();
+   void  data_in_B();
+   void  data_in_C();
+   void  data_in_D();
+   void  data_in_E();
+   void  data_in_H();
+   void  data_in_L();
    void  data_in_W();
    void  data_in_Z();
    void  data_in_IR();
 
-   void  LD_r_n();
+   void  exe_LD_r_r   (uint8_t opcode);
+   void  exe_LD_r_N   (TZ80Op op);
+   void  exe_LD_sRRs_N(uint16_t& reg);
 public:
    Z80();
    void     setData(uint8_t in)  { m_data = in; }
@@ -122,6 +152,7 @@ public:
    bool     signal(Signal s)     { return m_signals & (uint16_t)s; }
    uint8_t  data()               { return m_data; }
    uint16_t address()            { return m_address; }
+   uint64_t ticks()              { return m_ticks; }
    //Registers& reg()              { return m_reg; }
 
    void tick();
