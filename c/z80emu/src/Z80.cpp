@@ -1,17 +1,51 @@
 #include <Z80.hpp>
-#include <bitset>
 #include <Printer.hpp>
+#include <bitset>
 
 namespace Z80CPP {
 
+Z80::Z80() {
+   const uint16_t S_MREQ_RD_M1 = ~((uint16_t)Signal::MREQ | (uint16_t)Signal::RD | (uint16_t)Signal::M1);
+   const std::array<TState, 4> M1 = {{
+         {  .signals= S_MREQ_RD_M1, .addr= m_reg.PC, .op= &Z80::fetch }
+      ,  {  .signals= S_MREQ_RD_M1 }  // Just Wait
+      ,  {  .data= m_data, .op= &Z80::data_in_IR   }  // Data IN
+      ,  {  .op= &Z80::decode       }  // Decode
+   }};
+}
+
+void
+Z80::t (TState& t) {
+   m_signals = t.signals;
+   m_address = t.addr;
+   m_data    = t.data;
+   m_io      = t.io;
+   if (t.op) (this->*t.op)();
+}
+
 void 
-Z80::fetch() {
+Z80::fetch() { ++m_reg.PC; }
+
+
+void 
+Z80::memRd(const uint16_t& reg) {
    rstSignal(Signal::MREQ);
    rstSignal(Signal::RD);
-   rstSignal(Signal::M1);
-   m_address = m_reg.PC;      
-   ++m_reg.PC;
+   m_address = reg;
 }
+void Z80::memRdWZ() { memRd(m_reg.WZ); }
+void Z80::memRdHL() { memRd(m_reg.main.HL); }
+void Z80::memRdBC() { memRd(m_reg.main.BC); }
+void Z80::memRdDE() { memRd(m_reg.main.DE); }
+
+void
+Z80::data_in(uint8_t& reg) {
+   reg = m_data;
+}
+void Z80::data_in_W()  { data_in(m_reg.W); }
+void Z80::data_in_Z()  { data_in(m_reg.Z); }
+void Z80::data_in_IR() { data_in(m_reg.IR); }
+
 
 void 
 Z80::decode() {
