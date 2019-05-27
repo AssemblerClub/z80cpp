@@ -109,22 +109,22 @@ Z80::exe_LD_r_r(uint8_t opcode) {
    // instruction is simple LD r, r
    if (!rd) {
       if (!rs) { 
-         std::cout << "HALT\n";
+         //std::cout << "HALT\n";
          rstSignal(Signal::HALT);
       } else { 
          // Store 
-         std::cout << "LD (HL), r\n"; 
+         //std::cout << "LD (HL), r\n"; 
          exe_LD_sRRs_r(m_reg.main.HL, *rs);  
       }
    } else if (!rs) {
       // Get wrapper operation for destination
       // register and produce a LD r, (HL)
-      std::cout << "LD r, (HL)\n";
+      //std::cout << "LD r, (HL)\n";
       auto op = m_REGS8DATAIN[ rdnum ];
       exe_LD_r_sRRs(op, m_reg.main.HL);
    } else {
       // Simple LD r, r. Just assign registers
-      std::cout << "LD r, r\n";
+      //std::cout << "LD r, r\n";
       *rd = *rs;         
    }
 }
@@ -145,26 +145,26 @@ Z80::exe_LD_sRRs_N(uint16_t& reg) {
 
 void 
 Z80::decode() {
-   std::cout << "Decode: ";
+   //std::cout << "Decode: ";
 
    // Is a 8-bit R-R Load?
    if ( (m_reg.IR & 0xC0) == 0x40) exe_LD_r_r(m_reg.IR);
 
    switch( m_reg.IR ) {
-      case 0x06: exe_LD_r_N(&Z80::data_in_B);  std::cout<<"LD B,n\n";   break;
-      case 0x0E: exe_LD_r_N(&Z80::data_in_C);  std::cout<<"LD C,n\n";   break;
-      case 0x16: exe_LD_r_N(&Z80::data_in_D);  std::cout<<"LD D,n\n";   break;
-      case 0x1E: exe_LD_r_N(&Z80::data_in_E);  std::cout<<"LD E,n\n";   break;
-      case 0x26: exe_LD_r_N(&Z80::data_in_H);  std::cout<<"LD H,n\n";   break;
-      case 0x2E: exe_LD_r_N(&Z80::data_in_L);  std::cout<<"LD L,n\n";   break;
-      case 0x36: exe_LD_sRRs_N(m_reg.main.HL); std::cout<<"LD (HL),n\n";break;
-      case 0x3E: exe_LD_r_N(&Z80::data_in_A);  std::cout<<"LD A,n\n";   break;
+      case 0x06: exe_LD_r_N(&Z80::data_in_B);  break; //std::cout<<"LD B,n\n";   break;
+      case 0x0E: exe_LD_r_N(&Z80::data_in_C);  break; //std::cout<<"LD C,n\n";   break;
+      case 0x16: exe_LD_r_N(&Z80::data_in_D);  break; //std::cout<<"LD D,n\n";   break;
+      case 0x1E: exe_LD_r_N(&Z80::data_in_E);  break; //std::cout<<"LD E,n\n";   break;
+      case 0x26: exe_LD_r_N(&Z80::data_in_H);  break; //std::cout<<"LD H,n\n";   break;
+      case 0x2E: exe_LD_r_N(&Z80::data_in_L);  break; //std::cout<<"LD L,n\n";   break;
+      case 0x36: exe_LD_sRRs_N(m_reg.main.HL); break; //std::cout<<"LD (HL),n\n";break;
+      case 0x3E: exe_LD_r_N(&Z80::data_in_A);  break; //std::cout<<"LD A,n\n";   break;
    }
 }
 
 void
 Z80::wait() {
-   std::cout << "Waiting for memory\n";
+//   std::cout << "Waiting for memory\n";
 }
 
 void 
