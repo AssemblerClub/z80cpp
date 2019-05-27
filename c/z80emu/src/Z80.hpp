@@ -109,7 +109,8 @@ class Z80 {
    TVecOps    m_ops;             // Queue of pending operations
    TStateArr4 m_M1;              // Array containing the 4 states of default M1 Machine cycle
    TStateArr3 m_MRD, m_MWR;      // Array containing the 3 states of default MREAD/MWRITE Machine cycle
-   std::array<uint8_t*, 8> m_REGS8;   // 8-bit Register order with respect to Opcode bits
+   std::array<uint8_t*, 8> m_REGS8;    // 8-bit Register order with respect to Opcode bits
+   std::array<TZ80Op, 8> m_REGS8DATAIN;// 8-bit Register order (wrapper data_in functions) with respect to Opcode bits   
 
    // Member constants
 
@@ -144,6 +145,9 @@ class Z80 {
    void  exe_LD_r_r   (uint8_t opcode);
    void  exe_LD_r_N   (TZ80Op op);
    void  exe_LD_sRRs_N(uint16_t& reg);
+   void  exe_LD_sRRs_r(uint16_t& rd16, uint8_t& rs8);
+   void  exe_LD_r_sRRs(TZ80Op op, uint16_t& rs16);
+
 public:
    Z80();
    void     setData(uint8_t in)  { m_data = in; }
@@ -153,6 +157,8 @@ public:
    uint8_t  data()               { return m_data; }
    uint16_t address()            { return m_address; }
    uint64_t ticks()              { return m_ticks; }
+   void     setPC(uint16_t pc)   { m_reg.PC = pc;  }
+   uint16_t pc()                 { return m_reg.PC;  }
    //Registers& reg()              { return m_reg; }
 
    void tick();

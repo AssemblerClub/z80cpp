@@ -16,6 +16,10 @@ const uint16_t Z80::MS_RFSH       = (uint16_t)(~((uint16_t)Signal::RFSH));
 // Constructor
 Z80::Z80() {
    // Default Machine Cycle 1
+   //|         M1             |
+   //|   M1 |     | RFSH      |
+   //| MREQ | WAIT| DIN | dec |
+   //|   RD |     |     |     |
    m_M1 = {{
          {  .signals = &MS_MREQ_RD_M1, .addr = &m_reg.PC, .op = &Z80::fetch }
       ,  {   }  // Just Wait
@@ -23,12 +27,18 @@ Z80::Z80() {
       ,  {  .signals = &MS_RFSH,       .op= &Z80::decode       }  // Decode
    }};
    // Default Machine Read Cycle (By default, reads from PC)
+   //|      M2           |
+   //| MREQ | WAIT| DIN  | 
+   //|   RD |     |      | 
    m_MRD = {{
          {  .signals = &MS_MREQ_RD, .addr = &m_reg.PC, .op = &Z80::fetch }
       ,  {   }  // Just Wait
       ,  {  .signals = &MS_NOSIGNAL, .op= &Z80::data_in_W   }  // Data IN
    }};
    // Default Machine Write Cycle (By default, writes to (PC))
+   //|      M3           |
+   //| MREQ | WR  | DIN  | 
+   //|     -DOUT-----    |
    m_MWR = {{
          {  .signals = &MS_MREQ, .addr = &m_reg.PC, .data = &m_data }
       ,  {  .signals = &MS_MREQ_WR     } 
@@ -38,6 +48,11 @@ Z80::Z80() {
    m_REGS8 = {{
          &m_reg.main.B, &m_reg.main.C, &m_reg.main.D, &m_reg.main.E
       ,  &m_reg.main.H, &m_reg.main.L,       nullptr, &m_reg.main.A
+   }};
+   // 8-bit registers data_in wrapper functions in their order with respect to opcodes
+   m_REGS8DATAIN = {{
+         &Z80::data_in_B, &Z80::data_in_C, &Z80::data_in_D, &Z80::data_in_E
+      ,  &Z80::data_in_H, &Z80::data_in_L,         nullptr, &Z80::data_in_A
    }};
 }
 
@@ -70,28 +85,62 @@ Z80::exe_LD_r_N(TZ80Op op) {
    for(auto& t : states) m_ops.add(t);
 }
 
+void 
+Z80::exe_LD_r_sRRs(TZ80Op op, uint16_t& rs16) {
+   auto states = m_MRD;
+   states[0].addr = &rs16;
+   states[0].op   = nullptr;
+   states[2].op   = op;
+   for(auto& t : states) m_ops.add(t);
+}
+
 void
 Z80::exe_LD_r_r(uint8_t opcode) {
-   uint8_t* rd = m_REGS8[ (opcode & 0x38) >> 3 ];
-   uint8_t* rs = m_REGS8[ (opcode & 0x07)      ];
+   // Get destination and source registers
+   // numbers (0-7) and pointers
+   uint8_t  rdnum = (opcode & 0x38) >> 3;
+   uint8_t  rsnum = (opcode & 0x07);
+   uint8_t* rd = m_REGS8[ rdnum ];
+   uint8_t* rs = m_REGS8[ rsnum ];
+   
+   // Register num 6 is indirect through HL,
+   // and is marked has nullptr. If both registers 
+   // are 6 then instruction is HALT. Otherwise
+   // instruction is simple LD r, r
    if (!rd) {
-      if (!rs) std::cout << "HALT\n";
-      else     std::cout << "LD (HL), r\n";
+      if (!rs) { 
+         std::cout << "HALT\n";
+         rstSignal(Signal::HALT);
+      } else { 
+         // Store 
+         std::cout << "LD (HL), r\n"; 
+         exe_LD_sRRs_r(m_reg.main.HL, *rs);  
+      }
    } else if (!rs) {
+      // Get wrapper operation for destination
+      // register and produce a LD r, (HL)
       std::cout << "LD r, (HL)\n";
+      auto op = m_REGS8DATAIN[ rdnum ];
+      exe_LD_r_sRRs(op, m_reg.main.HL);
    } else {
+      // Simple LD r, r. Just assign registers
       std::cout << "LD r, r\n";
       *rd = *rs;         
    }
 }
 
 void 
+Z80::exe_LD_sRRs_r(uint16_t& rd16, uint8_t& rs8) {
+   auto states = m_MWR;
+   states[0].addr = &rd16;
+   states[0].data = &rs8;
+   for(auto& t : states) m_ops.add(t);
+}
+
+void 
 Z80::exe_LD_sRRs_N(uint16_t& reg) {
    exe_LD_r_N(&Z80::data_in_W);
-   auto states = m_MWR;
-   states[0].addr = &reg;
-   states[0].data = &m_reg.W;
-   for(auto& t : states) m_ops.add(t);
+   exe_LD_sRRs_r(reg, m_reg.W);
 }
 
 void 
@@ -112,10 +161,6 @@ Z80::decode() {
       case 0x3E: exe_LD_r_N(&Z80::data_in_A);  std::cout<<"LD A,n\n";   break;
    }
 }
-
-//|         M1             |      M2           |
-//             | REFRESH   |                   |
-//| MREQ | W   | DIN | DEC | MREQ | W   | DIN  | 
 
 void
 Z80::wait() {
