@@ -3,6 +3,7 @@
 #include <string>
 #include <Memory.hpp>
 #include <Z80.hpp>
+#include <Timer.hpp>
 
 class Computer {
    static const uint16_t MS_MAXMEM = 4096;
@@ -19,11 +20,17 @@ public:
    }
 
    void step() {
+      // Tick the CPU
       m_cpu.tick();
-      if        ( !m_cpu.signal(Z80CPP::Signal::RD) ) {
-         m_cpu.setData( m_mem[ m_cpu.address() ] );
-      } else if ( !m_cpu.signal(Z80CPP::Signal::WR) ) {
-         m_mem[ m_cpu.address() ] = m_cpu.data();
+
+      // Simulate a simple bus that connects to Memory through
+      // RD and WR signals
+      if ( !m_cpu.signal(Z80CPP::Signal::MREQ)) {
+         if        ( !m_cpu.signal(Z80CPP::Signal::RD) ) {
+            m_cpu.setData( m_mem[ m_cpu.address() ] );
+         } else if ( !m_cpu.signal(Z80CPP::Signal::WR) ) {
+            m_mem[ m_cpu.address() ] = m_cpu.data();
+         }
       }
    }
 
@@ -39,6 +46,21 @@ public:
       com.erase(0, pos);
    }
 
+   void doNsteps(uint32_t steps) {
+      uint64_t ticks = m_cpu.ticks();
+      Timer<uint64_t> t;
+
+      do { 
+         step(); 
+      } while(--steps);
+
+      uint64_t ns = t.ns();
+      std::cout << std::dec << "Passed: " << ns << " ns\n";
+      ticks = m_cpu.ticks() - ticks;
+      std::cout << "Ticks:  " << ticks << ". TPS: ";
+      std::cout << ticks*1000000000/ns << " MHZ: " << (float)ticks*1000/ns << "\n";
+   }
+
    void run() {
       std::string command;
       std::string token;
@@ -50,8 +72,13 @@ public:
             uint32_t steps = 1;
             if ( !command.empty() ) 
                steps = std::stoul(command);
-            do { step(); } while(--steps);
+            doNsteps(steps);
             print(std::cout, m_cpu.pc());
+         } else if (token == "m") {
+            uint16_t addr = 0;
+            if ( !command.empty() ) 
+               addr = std::stoul(command, nullptr, 0);
+            m_mem.print(std::cout, addr & 0xFFF0, 2);
          }
       } while (token != "q");
    }
