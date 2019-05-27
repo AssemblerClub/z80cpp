@@ -133,5 +133,56 @@ cleanall: clean
 clean: 
 	@$(call PRINT,$(PROJNAME),"Deleting folder: $(OBJDIR)/")
 	$(RM) -r ./$(OBJDIR)
-	@$(call PRINT,$(PROJNAME),"Deleting objects to clean: $(OBJS2CLEAN)")
-	$(foreach elem, $(OBJS2CLEAN), $(RM) -r ./$(elem))
+
+
+##
+## ASMTESTS
+##
+
+## Calculate ASM Objects
+##
+define GETASMOBJ
+$(patsubst $(ASMSRCDIR)%, $(ASMOBJDIR)%, $(1:%.$(ASMSRCEXT)=%.$(ASMOBJEXT)))
+endef
+
+## CONFIG
+##
+ASMSRCDIR:=tests
+ASMOBJDIR:=$(ASMSRCDIR)/obj
+ASMBINDIR:=$(ASMSRCDIR)/bin
+ASMSRCEXT:=s
+ASMOBJEXT:=bin
+ASMFILES :=$(wildcard $(ASMSRCDIR)/*.$(ASMSRCEXT))
+ASMOBJS  :=$(call GETASMOBJ,$(ASMFILES))
+
+tests: $(ASMOBJDIR) $(ASMBINDIR) $(ASMOBJS) 
+
+$(ASMOBJDIR) $(ASMBINDIR):
+	@$(MKDIR) $@
+
+cleantests:
+	@$(call PRINT,$(PROJNAME),"Deleting folder: $(ASMOBJDIR)/")
+	$(RM) -r ./$(ASMOBJDIR)
+
+cleanalltests: cleantests
+	@$(call PRINT,$(PROJNAME),"Deleting folder: $(ASMBINDIR)/")
+	$(RM) -r ./$(ASMBINDIR)
+
+#################
+# COMPILEASMFILE: General rule to compile an ASM, having source file and object file in different places
+#
+# $(1): Object file to be created  (with its relative path)
+# $(2): Source file asm
+#
+define COMPILEASMFILE
+$(1): $(2)
+	sdasz80 -ols "$(basename $(1)).rel" "$(2)"
+	sdcc -mz80 --no-std-crt0 --code-loc 0 --data-loc 0 "$(basename $(1)).rel" -o "$(basename $(1)).ihx"
+	${CPCT_PATH}/tools/hex2bin-2.0/bin/hex2bin -p 00 "$(basename $(1)).ihx"
+	mv "$(strip $(1))" "$(ASMBINDIR)"
+
+endef
+
+## COMPILE ALL ASMFILES
+$(foreach ASF, $(ASMFILES), $(eval $(call COMPILEASMFILE,$(call GETASMOBJ,$(ASF)),$(ASF))))
+
