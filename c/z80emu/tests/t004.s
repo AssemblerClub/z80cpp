@@ -1,0 +1,7 @@
+.area _DATA
+.area _CODE
+LD  A, #0xAA
+LD BC, #0xBBCC
+LD DE, #0xDDEE
+LD HL, #0x1122
+LD SP, #0x3344
