@@ -21,13 +21,13 @@ namespace Z80CPP {
 // Declares a struct with all Z80 Registers
 //
 struct Registers {
-   struct {
+   struct MainRegs {
       REGPAIR(AF, A, F);
       REGPAIR(BC, B, C);
       REGPAIR(DE, D, E);
       REGPAIR(HL, H, L);
    } main;
-   struct {
+   struct AltRegs {
       REGPAIR(AF, A, F);
       REGPAIR(BC, B, C);
       REGPAIR(DE, D, E);
@@ -36,7 +36,8 @@ struct Registers {
    REGPAIR(IX, IXh, IXl);
    REGPAIR(IY, IYh, IYl);
    REGPAIR(WZ,   W,   Z);
-   uint16_t PC, SP;
+   REGPAIR(SP,   S,   P);
+   uint16_t PC;
    uint8_t  I, R, IR;
    Registers() {
       std::memset(this, 0, sizeof(Registers));
@@ -125,7 +126,6 @@ class Z80 {
 
    
    // Private member functions
-
    void  fetch();
    void  wait();
    void  decode();
@@ -138,15 +138,20 @@ class Z80 {
    void  data_in_E();
    void  data_in_H();
    void  data_in_L();
+   void  data_in_S();
+   void  data_in_P();
    void  data_in_W();
    void  data_in_Z();
    void  data_in_IR();
 
-   void  exe_LD_r_r   (uint8_t opcode);
-   void  exe_LD_r_N   (TZ80Op op);
-   void  exe_LD_sRRs_N(uint16_t& reg);
-   void  exe_LD_sRRs_r(uint16_t& rd16, uint8_t& rs8);
-   void  exe_LD_r_sRRs(TZ80Op op, uint16_t& rs16);
+   void  exe_NOP      (); 
+   void  exe_HALT     ();
+   void  exe_LD_r_r   (uint8_t& rd, uint8_t& rs);
+   void  exe_LD_r_n   (TZ80Op op);
+   void  exe_LD_IrpI_n(uint16_t& reg);
+   void  exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8);
+   void  exe_LD_r_IrpI(TZ80Op op, uint16_t& rs16);
+   void  exe_LD_rp_nn (TZ80Op rhi, TZ80Op rlo);
 
 public:
    Z80();
