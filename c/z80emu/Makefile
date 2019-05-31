@@ -30,13 +30,15 @@
 
 # CONFIGURATION
 CC      := clang++
-CXXFLAGS:= -O3
+CXXFLAGS:= -O3 -Wall -pedantic -std=c++17 -Wno-gnu-anonymous-struct -Wno-nested-anon-types
+#CXXFLAGS:= -g 
 INCDIRS := -Isrc
 LINKLIBS:=
 PROJNAME:= z80emu
 TARGET  := $(PROJNAME)
 MKDIR   := mkdir -p 
 RM      := rm -f
+
 
 # ANSI Sequences for terminal colored printing
 COLOR_RED=\033[1;31;49m
@@ -147,6 +149,9 @@ endef
 
 ## CONFIG
 ##
+ASZ80	   :=$(wildcard ${CPCT_PATH}/tools/sdcc-3.6*/bin/sdasz80)
+SDCC	   :=$(wildcard ${CPCT_PATH}/tools/sdcc-3.6*/bin/sdcc)
+HEX2BIN  :=${CPCT_PATH}/tools/hex2bin-2.0/bin/hex2bin
 ASMSRCDIR:=tests
 ASMOBJDIR:=$(ASMSRCDIR)/obj
 ASMBINDIR:=$(ASMSRCDIR)/bin
@@ -176,9 +181,9 @@ cleanalltests: cleantests
 #
 define COMPILEASMFILE
 $(1): $(2)
-	sdasz80 -ols "$(basename $(1)).rel" "$(2)"
-	sdcc -mz80 --no-std-crt0 --code-loc 0 --data-loc 0 "$(basename $(1)).rel" -o "$(basename $(1)).ihx"
-	${CPCT_PATH}/tools/hex2bin-2.0/bin/hex2bin -p 00 "$(basename $(1)).ihx"
+	$(ASZ80) -ols "$(basename $(1)).rel" "$(2)"
+	$(SDCC) -mz80 --no-std-crt0 --code-loc 0 --data-loc 0 "$(basename $(1)).rel" -o "$(basename $(1)).ihx"
+	$(HEX2BIN) -p 00 "$(basename $(1)).ihx"
 	mv "$(strip $(1))" "$(ASMBINDIR)"
 
 endef
