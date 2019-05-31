@@ -1,54 +1,10 @@
 #include <Z80.hpp>
 #include <Printer.hpp>
-#include <bitset>
 
 namespace Z80CPP {
 
-// Definition of static const signal groups
-const uint16_t Z80::MS_NOSIGNAL   = 0xFFFF;
-const uint16_t Z80::MS_MREQ       = (uint16_t)(~((uint16_t)Signal::MREQ));
-const uint16_t Z80::MS_MREQ_RD    = (uint16_t)(~((uint16_t)Signal::MREQ | (uint16_t)Signal::RD));
-const uint16_t Z80::MS_MREQ_WR    = (uint16_t)(~((uint16_t)Signal::MREQ | (uint16_t)Signal::WR));
-const uint16_t Z80::MS_MREQ_RD_M1 = (uint16_t)(Z80::MS_MREQ_RD & ~((uint16_t)Signal::M1));
-const uint16_t Z80::MS_MREQ_RFSH  = (uint16_t)(~((uint16_t)Signal::MREQ | (uint16_t)Signal::RFSH));
-const uint16_t Z80::MS_RFSH       = (uint16_t)(~((uint16_t)Signal::RFSH));
-
 // Constructor
 Z80::Z80() {
-   // Default Machine Cycle 1
-   //|         M1             |
-   //|   M1 |     | RFSH      |
-   //| MREQ | WAIT| DIN | dec |
-   //|   RD |     |     |     |
-   m_M1 = {{
-         TState(&MS_MREQ_RD_M1, &m_reg.PC , nullptr, nullptr, TZ80Op(&Z80::fetch))
-      ,  TState()
-      ,  TState(&MS_MREQ_RFSH , nullptr   , nullptr, nullptr, TZ80Op(&Z80::data_in, m_reg.IR))
-      ,  TState(&MS_RFSH      , nullptr   , nullptr, nullptr, TZ80Op(&Z80::decode))
-   }};
-   // Default Machine Re7ad Cycle (By default, reads from PC)
-   //|      M2           |
-   //| MREQ | WAIT| DIN  | 
-   //|   RD |     |      | 
-   m_MRD = {{
-         TState(&MS_MREQ_RD , &m_reg.PC , nullptr, nullptr, TZ80Op(&Z80::fetch))
-      ,  TState()
-      ,  TState(&MS_NOSIGNAL, nullptr   , nullptr, nullptr, TZ80Op(&Z80::data_in, m_reg.W))
-   }};
-   // Default Machine Write Cycle (By default, writes to (PC))
-   //|      M3           |
-   //| MREQ | WR  | DIN  | 
-   //|     -DOUT-----    |
-   m_MWR = {{
-         TState(&MS_MREQ      , &m_reg.PC , &m_data , nullptr, TZ80Op())
-      ,  TState(&MS_MREQ_WR   , nullptr   , nullptr , nullptr, TZ80Op())
-      ,  TState(&MS_NOSIGNAL  , nullptr   , nullptr , nullptr, TZ80Op())
-   }};
-   // 8-bit registers in their order with respect to opcodes
-   m_REGS8 = {{
-         &m_reg.main.B, &m_reg.main.C, &m_reg.main.D, &m_reg.main.E
-      ,  &m_reg.main.H, &m_reg.main.L,       nullptr, &m_reg.main.A
-   }};
 }
 
 void
@@ -65,18 +21,12 @@ void Z80::data_in(uint8_t& reg)  { reg = m_data;  }
 
 void 
 Z80::exe_LD_r_n(uint8_t& reg) {
-   auto states = m_MRD;
-   states[2].op.set(&Z80::data_in, reg);
-   for(auto& t : states) m_ops.add(t);
+   m_ops.addM2Read(m_reg.PC, reg, TZ80Op(&Z80::fetch));
 }
 
 void 
 Z80::exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16) {
-   auto states = m_MRD;
-   states[0].addr = &rs16;
-   states[0].op.reset();
-   states[2].op.set(&Z80::data_in, rd8);
-   for(auto& t : states) m_ops.add(t);
+   m_ops.addM2Read(rs16, rd8, TZ80Op());
 }
 
 void
@@ -99,19 +49,13 @@ Z80::exe_LD_r_r(uint8_t& rd, uint8_t& rs) {
 
 void 
 Z80::exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8) {
-   auto states = m_MWR;
-   states[0].addr = &rd16;
-   states[0].data = &rs8;
-   for(auto& t : states) m_ops.add(t);
+   m_ops.addM3Write(rd16, rs8);
 }
 
 void
 Z80::exe_LD_rp_nn(uint8_t& rhi, uint8_t& rlo) {
-   auto states = m_MRD;
-   states[2].op.set(&Z80::data_in, rlo);
-   for(auto& t : states) m_ops.add(t);
-   states[2].op.set(&Z80::data_in, rhi);
-   for(auto& t : states) m_ops.add(t);
+   m_ops.addM2Read(m_reg.PC, rlo, TZ80Op(&Z80::fetch));
+   m_ops.addM2Read(m_reg.PC, rhi, TZ80Op(&Z80::fetch));
 }
 
 void 
@@ -222,10 +166,8 @@ Z80::tick() {
    // When there are no machine operations
    // pending, add a new M1 Cycle to fetch and decode
    // next instruction
-   if ( m_ops.empty() ) {
-      for(auto& t: m_M1)
-         m_ops.add(t);
-   }
+   if ( m_ops.empty() )
+      m_ops.addM1(m_reg.PC, m_reg.IR);
 
    // Now process next T-state in pending operations
    process_tstate( m_ops.pop() );
