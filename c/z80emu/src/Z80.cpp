@@ -21,78 +21,61 @@ Z80::Z80() {
    //| MREQ | WAIT| DIN | dec |
    //|   RD |     |     |     |
    m_M1 = {{
-         {  .signals = &MS_MREQ_RD_M1, .addr = &m_reg.PC, .op = &Z80::fetch }
-      ,  {   }  // Just Wait
-      ,  {  .signals = &MS_MREQ_RFSH,  .op= &Z80::data_in_IR   }  // Data IN
-      ,  {  .signals = &MS_RFSH,       .op= &Z80::decode       }  // Decode
+         TState(&MS_MREQ_RD_M1, &m_reg.PC , nullptr, nullptr, TZ80Op(&Z80::fetch))
+      ,  TState()
+      ,  TState(&MS_MREQ_RFSH , nullptr   , nullptr, nullptr, TZ80Op(&Z80::data_in, m_reg.IR))
+      ,  TState(&MS_RFSH      , nullptr   , nullptr, nullptr, TZ80Op(&Z80::decode))
    }};
-   // Default Machine Read Cycle (By default, reads from PC)
+   // Default Machine Re7ad Cycle (By default, reads from PC)
    //|      M2           |
    //| MREQ | WAIT| DIN  | 
    //|   RD |     |      | 
    m_MRD = {{
-         {  .signals = &MS_MREQ_RD, .addr = &m_reg.PC, .op = &Z80::fetch }
-      ,  {   }  // Just Wait
-      ,  {  .signals = &MS_NOSIGNAL, .op= &Z80::data_in_W   }  // Data IN
+         TState(&MS_MREQ_RD , &m_reg.PC , nullptr, nullptr, TZ80Op(&Z80::fetch))
+      ,  TState()
+      ,  TState(&MS_NOSIGNAL, nullptr   , nullptr, nullptr, TZ80Op(&Z80::data_in, m_reg.W))
    }};
    // Default Machine Write Cycle (By default, writes to (PC))
    //|      M3           |
    //| MREQ | WR  | DIN  | 
    //|     -DOUT-----    |
    m_MWR = {{
-         {  .signals = &MS_MREQ, .addr = &m_reg.PC, .data = &m_data }
-      ,  {  .signals = &MS_MREQ_WR     } 
-      ,  {  .signals = &MS_NOSIGNAL    } 
+         TState(&MS_MREQ      , &m_reg.PC , &m_data , nullptr, TZ80Op())
+      ,  TState(&MS_MREQ_WR   , nullptr   , nullptr , nullptr, TZ80Op())
+      ,  TState(&MS_NOSIGNAL  , nullptr   , nullptr , nullptr, TZ80Op())
    }};
    // 8-bit registers in their order with respect to opcodes
    m_REGS8 = {{
          &m_reg.main.B, &m_reg.main.C, &m_reg.main.D, &m_reg.main.E
       ,  &m_reg.main.H, &m_reg.main.L,       nullptr, &m_reg.main.A
    }};
-   // 8-bit registers data_in wrapper functions in their order with respect to opcodes
-   m_REGS8DATAIN = {{
-         &Z80::data_in_B, &Z80::data_in_C, &Z80::data_in_D, &Z80::data_in_E
-      ,  &Z80::data_in_H, &Z80::data_in_L,         nullptr, &Z80::data_in_A
-   }};
 }
 
 void
 Z80::process_tstate (const TState& t) {
-   if (t.signals) m_signals = *t.signals;
-   if (t.addr)    m_address = *t.addr;
-   if (t.data)    m_data    = *t.data;
-   if (t.io)      m_io      = *t.io;
-   if (t.op)      (this->*t.op)();
+   if (t.signals)     m_signals = *t.signals;
+   if (t.addr)        m_address = *t.addr;
+   if (t.data)        m_data    = *t.data;
+   if (t.io)          m_io      = *t.io;
+   if (!t.op.empty()) t.op(*this);
 }
 
-void Z80::fetch()                { ++m_reg.PC;              }
-void Z80::data_in(uint8_t& reg)  { reg = m_data;            }
-void Z80::data_in_A()            { data_in(m_reg.main.A);   }
-void Z80::data_in_B()            { data_in(m_reg.main.B);   }
-void Z80::data_in_C()            { data_in(m_reg.main.C);   }
-void Z80::data_in_D()            { data_in(m_reg.main.D);   }
-void Z80::data_in_E()            { data_in(m_reg.main.E);   }
-void Z80::data_in_H()            { data_in(m_reg.main.H);   }
-void Z80::data_in_L()            { data_in(m_reg.main.L);   }
-void Z80::data_in_S()            { data_in(m_reg.S);        }
-void Z80::data_in_P()            { data_in(m_reg.P);        }
-void Z80::data_in_W()            { data_in(m_reg.W);        }
-void Z80::data_in_Z()            { data_in(m_reg.Z);        }
-void Z80::data_in_IR()           { data_in(m_reg.IR);       }
+void Z80::fetch()                { ++m_reg.PC;    }
+void Z80::data_in(uint8_t& reg)  { reg = m_data;  }
 
 void 
-Z80::exe_LD_r_n(TZ80Op op) {
+Z80::exe_LD_r_n(uint8_t& reg) {
    auto states = m_MRD;
-   states[2].op = op;
+   states[2].op.set(&Z80::data_in, reg);
    for(auto& t : states) m_ops.add(t);
 }
 
 void 
-Z80::exe_LD_r_IrpI(TZ80Op op, uint16_t& rs16) {
+Z80::exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16) {
    auto states = m_MRD;
    states[0].addr = &rs16;
-   states[0].op   = nullptr;
-   states[2].op   = op;
+   states[0].op.reset();
+   states[2].op.set(&Z80::data_in, rd8);
    for(auto& t : states) m_ops.add(t);
 }
 
@@ -123,131 +106,115 @@ Z80::exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8) {
 }
 
 void
-Z80::exe_LD_rp_nn(TZ80Op rhi, TZ80Op rlo) {
+Z80::exe_LD_rp_nn(uint8_t& rhi, uint8_t& rlo) {
    auto states = m_MRD;
-   states[2].op = rlo;
+   states[2].op.set(&Z80::data_in, rlo);
    for(auto& t : states) m_ops.add(t);
-   states[2].op = rhi;
+   states[2].op.set(&Z80::data_in, rhi);
    for(auto& t : states) m_ops.add(t);
 }
 
 void 
 Z80::exe_LD_IrpI_n(uint16_t& reg) {
-   exe_LD_r_n(&Z80::data_in_W);
+   exe_LD_r_n   (m_reg.W);
    exe_LD_IrpI_r(reg, m_reg.W);
 }
 
 void 
 Z80::decode() {
    // Aliases for brevity
-   auto&  r     = m_reg.main;
-   auto&& din_B = &Z80::data_in_B;
-   auto&& din_C = &Z80::data_in_C;
-   auto&& din_D = &Z80::data_in_D;
-   auto&& din_E = &Z80::data_in_E;
-   auto&& din_H = &Z80::data_in_H;
-   auto&& din_L = &Z80::data_in_L;
-   auto&& din_A = &Z80::data_in_A;
-   auto&& din_S = &Z80::data_in_S;
-   auto&& din_P = &Z80::data_in_P;
-   
-   //std::cout << "Decode: ";
-   // Is a 8-bit R-R Load?
-   //if ( (m_reg.IR & 0xC0) == 0x40) exe_LD_r_r(m_reg.IR);
+   auto&  r     = m_reg;
+   auto&  rm    = r.main;
 
+   // Instruction jump table   
    switch( m_reg.IR ) {
       // Basicos
       case 0x00: exe_NOP      ();      break;
-      case 0x01: exe_LD_rp_nn (din_B, din_C); break;
-      case 0x11: exe_LD_rp_nn (din_D, din_E); break;
-      case 0x21: exe_LD_rp_nn (din_H, din_L); break;
-      case 0x31: exe_LD_rp_nn (din_S, din_P); break;
-      case 0x06: exe_LD_r_n   (din_B); break;
-      case 0x0E: exe_LD_r_n   (din_C); break;
-      case 0x16: exe_LD_r_n   (din_D); break;
-      case 0x1E: exe_LD_r_n   (din_E); break;
-      case 0x26: exe_LD_r_n   (din_H); break;
-      case 0x2E: exe_LD_r_n   (din_L); break;
-      case 0x36: exe_LD_IrpI_n( r.HL); break;
-      case 0x3E: exe_LD_r_n   (din_A); break;
+      case 0x01: exe_LD_rp_nn (rm.B, rm.C); break;
+      case 0x11: exe_LD_rp_nn (rm.D, rm.E); break;
+      case 0x21: exe_LD_rp_nn (rm.H, rm.L); break;
+      case 0x31: exe_LD_rp_nn ( r.S,  r.P); break;
+      case 0x06: exe_LD_r_n   (rm.B ); break;
+      case 0x0E: exe_LD_r_n   (rm.C ); break;
+      case 0x16: exe_LD_r_n   (rm.D ); break;
+      case 0x1E: exe_LD_r_n   (rm.E ); break;
+      case 0x26: exe_LD_r_n   (rm.H ); break;
+      case 0x2E: exe_LD_r_n   (rm.L ); break;
+      case 0x36: exe_LD_IrpI_n(rm.HL); break;
+      case 0x3E: exe_LD_r_n   (rm.A ); break;
       // 0x40-0x47 [[ LD B, r ]]
-      case 0x40: exe_LD_r_r   (  r.B, r.B ); break;
-      case 0x41: exe_LD_r_r   (  r.B, r.C ); break;
-      case 0x42: exe_LD_r_r   (  r.B, r.D ); break;
-      case 0x43: exe_LD_r_r   (  r.B, r.E ); break;
-      case 0x44: exe_LD_r_r   (  r.B, r.H ); break;
-      case 0x45: exe_LD_r_r   (  r.B, r.L ); break;
-      case 0x46: exe_LD_r_IrpI(din_B, r.HL); break;
-      case 0x47: exe_LD_r_r   (  r.B, r.A ); break;
+      case 0x40: exe_LD_r_r   (rm.B, rm.B ); break;
+      case 0x41: exe_LD_r_r   (rm.B, rm.C ); break;
+      case 0x42: exe_LD_r_r   (rm.B, rm.D ); break;
+      case 0x43: exe_LD_r_r   (rm.B, rm.E ); break;
+      case 0x44: exe_LD_r_r   (rm.B, rm.H ); break;
+      case 0x45: exe_LD_r_r   (rm.B, rm.L ); break;
+      case 0x46: exe_LD_r_IrpI(rm.B, rm.HL); break;
+      case 0x47: exe_LD_r_r   (rm.B, rm.A ); break;
       // 0x48-0x4F [[ LD C, r ]]
-      case 0x48: exe_LD_r_r   (  r.C, r.B ); break;
-      case 0x49: exe_LD_r_r   (  r.C, r.C ); break;
-      case 0x4A: exe_LD_r_r   (  r.C, r.D ); break;
-      case 0x4B: exe_LD_r_r   (  r.C, r.E ); break;
-      case 0x4C: exe_LD_r_r   (  r.C, r.H ); break;
-      case 0x4D: exe_LD_r_r   (  r.C, r.L ); break;
-      case 0x4E: exe_LD_r_IrpI(din_C, r.HL); break;
-      case 0x4F: exe_LD_r_r   (  r.C, r.A ); break;
+      case 0x48: exe_LD_r_r   (rm.C, rm.B ); break;
+      case 0x49: exe_LD_r_r   (rm.C, rm.C ); break;
+      case 0x4A: exe_LD_r_r   (rm.C, rm.D ); break;
+      case 0x4B: exe_LD_r_r   (rm.C, rm.E ); break;
+      case 0x4C: exe_LD_r_r   (rm.C, rm.H ); break;
+      case 0x4D: exe_LD_r_r   (rm.C, rm.L ); break;
+      case 0x4E: exe_LD_r_IrpI(rm.C, rm.HL); break;
+      case 0x4F: exe_LD_r_r   (rm.C, rm.A ); break;
       // 0x50-0x57 [[ LD D, r ]]
-      case 0x50: exe_LD_r_r   (  r.D, r.B ); break;
-      case 0x51: exe_LD_r_r   (  r.D, r.C ); break;
-      case 0x52: exe_LD_r_r   (  r.D, r.D ); break;
-      case 0x53: exe_LD_r_r   (  r.D, r.E ); break;
-      case 0x54: exe_LD_r_r   (  r.D, r.H ); break;
-      case 0x55: exe_LD_r_r   (  r.D, r.L ); break;
-      case 0x56: exe_LD_r_IrpI(din_D, r.HL); break;
-      case 0x57: exe_LD_r_r   (  r.D, r.A ); break;
+      case 0x50: exe_LD_r_r   (rm.D, rm.B ); break;
+      case 0x51: exe_LD_r_r   (rm.D, rm.C ); break;
+      case 0x52: exe_LD_r_r   (rm.D, rm.D ); break;
+      case 0x53: exe_LD_r_r   (rm.D, rm.E ); break;
+      case 0x54: exe_LD_r_r   (rm.D, rm.H ); break;
+      case 0x55: exe_LD_r_r   (rm.D, rm.L ); break;
+      case 0x56: exe_LD_r_IrpI(rm.D, rm.HL); break;
+      case 0x57: exe_LD_r_r   (rm.D, rm.A ); break;
       // 0x50-0x57 [[ LD E, r ]]
-      case 0x58: exe_LD_r_r   (  r.E, r.B ); break;
-      case 0x59: exe_LD_r_r   (  r.E, r.C ); break;
-      case 0x5A: exe_LD_r_r   (  r.E, r.D ); break;
-      case 0x5B: exe_LD_r_r   (  r.E, r.E ); break;
-      case 0x5C: exe_LD_r_r   (  r.E, r.H ); break;
-      case 0x5D: exe_LD_r_r   (  r.E, r.L ); break;
-      case 0x5E: exe_LD_r_IrpI(din_E, r.HL); break;
-      case 0x5F: exe_LD_r_r   (  r.E, r.A ); break;
+      case 0x58: exe_LD_r_r   (rm.E, rm.B ); break;
+      case 0x59: exe_LD_r_r   (rm.E, rm.C ); break;
+      case 0x5A: exe_LD_r_r   (rm.E, rm.D ); break;
+      case 0x5B: exe_LD_r_r   (rm.E, rm.E ); break;
+      case 0x5C: exe_LD_r_r   (rm.E, rm.H ); break;
+      case 0x5D: exe_LD_r_r   (rm.E, rm.L ); break;
+      case 0x5E: exe_LD_r_IrpI(rm.E, rm.HL); break;
+      case 0x5F: exe_LD_r_r   (rm.E, rm.A ); break;
       // 0x60-0x67 [[ LD H, r ]]
-      case 0x60: exe_LD_r_r   (  r.H, r.B ); break;
-      case 0x61: exe_LD_r_r   (  r.H, r.C ); break;
-      case 0x62: exe_LD_r_r   (  r.H, r.D ); break;
-      case 0x63: exe_LD_r_r   (  r.H, r.E ); break;
-      case 0x64: exe_LD_r_r   (  r.H, r.H ); break;
-      case 0x65: exe_LD_r_r   (  r.H, r.L ); break;
-      case 0x66: exe_LD_r_IrpI(din_H, r.HL); break;
-      case 0x67: exe_LD_r_r   (  r.H, r.A ); break;
+      case 0x60: exe_LD_r_r   (rm.H, rm.B ); break;
+      case 0x61: exe_LD_r_r   (rm.H, rm.C ); break;
+      case 0x62: exe_LD_r_r   (rm.H, rm.D ); break;
+      case 0x63: exe_LD_r_r   (rm.H, rm.E ); break;
+      case 0x64: exe_LD_r_r   (rm.H, rm.H ); break;
+      case 0x65: exe_LD_r_r   (rm.H, rm.L ); break;
+      case 0x66: exe_LD_r_IrpI(rm.H, rm.HL); break;
+      case 0x67: exe_LD_r_r   (rm.H, rm.A ); break;
       // 0x68-0x6F [[ LD L, r ]]
-      case 0x68: exe_LD_r_r   (  r.L, r.B ); break;
-      case 0x69: exe_LD_r_r   (  r.L, r.C ); break;
-      case 0x6A: exe_LD_r_r   (  r.L, r.D ); break;
-      case 0x6B: exe_LD_r_r   (  r.L, r.E ); break;
-      case 0x6C: exe_LD_r_r   (  r.L, r.H ); break;
-      case 0x6D: exe_LD_r_r   (  r.L, r.L ); break;
-      case 0x6E: exe_LD_r_IrpI(din_L, r.HL); break;
-      case 0x6F: exe_LD_r_r   (  r.L, r.A ); break;
+      case 0x68: exe_LD_r_r   (rm.L, rm.B ); break;
+      case 0x69: exe_LD_r_r   (rm.L, rm.C ); break;
+      case 0x6A: exe_LD_r_r   (rm.L, rm.D ); break;
+      case 0x6B: exe_LD_r_r   (rm.L, rm.E ); break;
+      case 0x6C: exe_LD_r_r   (rm.L, rm.H ); break;
+      case 0x6D: exe_LD_r_r   (rm.L, rm.L ); break;
+      case 0x6E: exe_LD_r_IrpI(rm.L, rm.HL); break;
+      case 0x6F: exe_LD_r_r   (rm.L, rm.A ); break;
       // 0x70-0x77 [[ LD (HL), r ]]
-      case 0x70: exe_LD_IrpI_r( r.HL, r.B ); break;
-      case 0x71: exe_LD_IrpI_r( r.HL, r.C ); break;
-      case 0x72: exe_LD_IrpI_r( r.HL, r.D ); break;
-      case 0x73: exe_LD_IrpI_r( r.HL, r.E ); break;
-      case 0x74: exe_LD_IrpI_r( r.HL, r.H ); break;
-      case 0x75: exe_LD_IrpI_r( r.HL, r.L ); break;
+      case 0x70: exe_LD_IrpI_r(rm.HL, rm.B ); break;
+      case 0x71: exe_LD_IrpI_r(rm.HL, rm.C ); break;
+      case 0x72: exe_LD_IrpI_r(rm.HL, rm.D ); break;
+      case 0x73: exe_LD_IrpI_r(rm.HL, rm.E ); break;
+      case 0x74: exe_LD_IrpI_r(rm.HL, rm.H ); break;
+      case 0x75: exe_LD_IrpI_r(rm.HL, rm.L ); break;
       case 0x76: exe_HALT();                 break;
-      case 0x77: exe_LD_IrpI_r( r.HL, r.A ); break;
+      case 0x77: exe_LD_IrpI_r(rm.HL, rm.A ); break;
       // 0x78-0x7F [[ LD A, r ]]
-      case 0x78: exe_LD_r_r   (  r.A, r.B ); break;
-      case 0x79: exe_LD_r_r   (  r.A, r.C ); break;
-      case 0x7A: exe_LD_r_r   (  r.A, r.D ); break;
-      case 0x7B: exe_LD_r_r   (  r.A, r.E ); break;
-      case 0x7C: exe_LD_r_r   (  r.A, r.H ); break;
-      case 0x7D: exe_LD_r_r   (  r.A, r.L ); break;
-      case 0x7E: exe_LD_r_IrpI(din_A, r.HL); break;
-      case 0x7F: exe_LD_r_r   (  r.A, r.A ); break;
+      case 0x78: exe_LD_r_r   (rm.A, rm.B ); break;
+      case 0x79: exe_LD_r_r   (rm.A, rm.C ); break;
+      case 0x7A: exe_LD_r_r   (rm.A, rm.D ); break;
+      case 0x7B: exe_LD_r_r   (rm.A, rm.E ); break;
+      case 0x7C: exe_LD_r_r   (rm.A, rm.H ); break;
+      case 0x7D: exe_LD_r_r   (rm.A, rm.L ); break;
+      case 0x7E: exe_LD_r_IrpI(rm.A, rm.HL); break;
+      case 0x7F: exe_LD_r_r   (rm.A, rm.A ); break;
    }
-}
-
-void
-Z80::wait() {
-//   std::cout << "Waiting for memory\n";
 }
 
 void 

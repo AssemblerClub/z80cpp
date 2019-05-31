@@ -60,19 +60,86 @@ enum class Signal : uint16_t {
 };
 
 //
+// TZ80Op: Encapsulates an operation (member function) to be performed 
+// (called) on a given TState. The operation is stored in a union to
+// save space, along with its parameters (if it has). m_type contains
+// the type of operation being contained, which lets us use the appropriate
+// bytes of the union and call a valid member function.
+//
+class Z80;
+struct TZ80Op {
+   // Classes of functions that this object manages
+   enum class Type {
+         NOP
+      ,  VOID
+      ,  _1PU8Ref
+   };
+   // Type aliases for function pointers
+   using VOIDFp      = void(Z80::*)(void);
+   using _1PU8RefFp  = void(Z80::*)(uint8_t&);
+
+   // Explicit constructors for functions types
+   explicit TZ80Op()                : m_type(Type::NOP) {} 
+   explicit TZ80Op( VOIDFp f )      : m_type(Type::VOID), m_fv(f) {}
+   explicit TZ80Op( _1PU8RefFp f, uint8_t& p ) 
+      : m_type(Type::_1PU8Ref), m_f1u8r(f), m_f1u8r_p(&p) {}
+
+   // Set new function and type
+   void reset() {
+      m_type = Type::NOP;
+   }
+   void set( VOIDFp     f ) { 
+      m_type = Type::VOID;
+      m_fv = f; 
+   }
+   void set( _1PU8RefFp f, uint8_t& p0 ) { 
+      m_type = Type::_1PU8Ref;
+      m_f1u8r = f;
+      m_f1u8r_p = &p0;
+   }
+
+   // Call contained function
+   void operator()(Z80& cpu) const {
+      // Produce member function call depending on m_type
+      switch(m_type) {
+         case Type::VOID:     (cpu.*m_fv)(); break;
+         case Type::_1PU8Ref: (cpu.*m_f1u8r)(*m_f1u8r_p); break;
+         case Type::NOP: break;         
+      }
+   }
+
+   bool empty() const { return m_type == Type::NOP; }
+
+private:
+   Type m_type;     //< Type of operation
+   union {
+      // Type 0: Void function, no parameters
+      struct { VOIDFp m_fv; };
+      // Type 1: Void function, 1 8-bits parameter by reference
+      struct {
+         _1PU8RefFp  m_f1u8r;
+         uint8_t*    m_f1u8r_p;
+      };
+   };
+};
+
+
+//
 // TState: Status of the Z80 after a given TState
 //   It defines how pinouts should be, and an operation
 //   to be performed
 //
-class Z80;
-using TZ80Op = void(Z80::*)();
 struct TState {
    const uint16_t* signals = nullptr;
    const uint16_t* addr    = nullptr; 
    const uint8_t*  data    = nullptr;
    const uint8_t*  io      = nullptr;
-          TZ80Op   op      = nullptr;
+          TZ80Op   op      = TZ80Op();
+   TState() = default;
+   TState(const uint16_t* s, const uint16_t* a, const uint8_t* d, const uint8_t* i, TZ80Op&& o)
+      : signals(s), addr(a), data(d), io(i), op(std::move(o)) {}
 };
+
 
 //
 // TVecOps: Class for encapsulating a fixed-length 
@@ -111,7 +178,6 @@ class Z80 {
    TStateArr4 m_M1;              // Array containing the 4 states of default M1 Machine cycle
    TStateArr3 m_MRD, m_MWR;      // Array containing the 3 states of default MREAD/MWRITE Machine cycle
    std::array<uint8_t*, 8> m_REGS8;    // 8-bit Register order with respect to Opcode bits
-   std::array<TZ80Op, 8> m_REGS8DATAIN;// 8-bit Register order (wrapper data_in functions) with respect to Opcode bits   
 
    // Member constants
 
@@ -124,35 +190,23 @@ class Z80 {
    static const uint16_t MS_MREQ_RFSH;
    static const uint16_t MS_RFSH;
 
-   
    // Private member functions
-   void  fetch();
-   void  wait();
-   void  decode();
-   void  process_tstate (const TState& t);
-   void  data_in(uint8_t& reg);
-   void  data_in_A();
-   void  data_in_B();
-   void  data_in_C();
-   void  data_in_D();
-   void  data_in_E();
-   void  data_in_H();
-   void  data_in_L();
-   void  data_in_S();
-   void  data_in_P();
-   void  data_in_W();
-   void  data_in_Z();
-   void  data_in_IR();
 
+   // Z80 T-state processing operations
+   void  process_tstate (const TState& t);
+   void  fetch();
+   void  decode();
+   void  data_in(uint8_t& reg);
+
+   // Z80 Instructions (Execution)
    void  exe_NOP      (); 
    void  exe_HALT     ();
    void  exe_LD_r_r   (uint8_t& rd, uint8_t& rs);
-   void  exe_LD_r_n   (TZ80Op op);
+   void  exe_LD_r_n   (uint8_t& reg);
    void  exe_LD_IrpI_n(uint16_t& reg);
    void  exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8);
-   void  exe_LD_r_IrpI(TZ80Op op, uint16_t& rs16);
-   void  exe_LD_rp_nn (TZ80Op rhi, TZ80Op rlo);
-
+   void  exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16);
+   void  exe_LD_rp_nn (uint8_t& rhi, uint8_t& rlo);
 public:
    Z80();
    void     setData(uint8_t in)  { m_data = in; }
