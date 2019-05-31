@@ -26,6 +26,8 @@ Memory::print(std::ostream& out, uint16_t pos, uint16_t blocks) const {
    
    ++blocks;
    uint8_t* pmem = &m_bytes[pos];
+   out << "dddd|  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F |\n";
+   out << "----|-------------------------------------------------|\n";
    while(--blocks) {
       out << std::hex << std::setw(4) << std::setfill('0');
       out << pos << "|";
