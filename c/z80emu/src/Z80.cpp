@@ -3,30 +3,25 @@
 
 namespace Z80CPP {
 
-// Constructor
-Z80::Z80() {
-}
-
 void
 Z80::process_tstate (const TState& t) {
-   if (t.signals)     m_signals = *t.signals;
+   m_signals = t.signals;
    if (t.addr)        m_address = *t.addr;
    if (t.data)        m_data    = *t.data;
    if (t.io)          m_io      = *t.io;
    if (!t.op.empty()) t.op(*this);
 }
 
-void Z80::fetch()                { ++m_reg.PC;    }
 void Z80::data_in(uint8_t& reg)  { reg = m_data;  }
 
 void 
 Z80::exe_LD_r_n(uint8_t& reg) {
-   m_ops.addM2Read(m_reg.PC, reg, TZ80Op(&Z80::fetch));
+   m_ops.addM23Read(m_reg.PC, reg, TZ80Op(&Z80::inc, m_reg.PC));
 }
 
 void 
 Z80::exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16) {
-   m_ops.addM2Read(rs16, rd8, TZ80Op());
+   m_ops.addM23Read(rs16, rd8, TZ80Op());
 }
 
 void
@@ -49,13 +44,13 @@ Z80::exe_LD_r_r(uint8_t& rd, uint8_t& rs) {
 
 void 
 Z80::exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8) {
-   m_ops.addM3Write(rd16, rs8);
+   m_ops.addM4Write(rd16, rs8);
 }
 
 void
 Z80::exe_LD_rp_nn(uint8_t& rhi, uint8_t& rlo) {
-   m_ops.addM2Read(m_reg.PC, rlo, TZ80Op(&Z80::fetch));
-   m_ops.addM2Read(m_reg.PC, rhi, TZ80Op(&Z80::fetch));
+   m_ops.addM23Read(m_reg.PC, rlo, TZ80Op(&Z80::inc, m_reg.PC));
+   m_ops.addM23Read(m_reg.PC, rhi, TZ80Op(&Z80::inc, m_reg.PC));
 }
 
 void 
@@ -71,7 +66,8 @@ Z80::decode() {
    auto&  rm    = r.main;
 
    // Instruction jump table   
-   switch( m_reg.IR ) {
+   switch( m_data ) {
+   //switch( m_reg.IR ) {
       // Basicos
       case 0x00: exe_NOP      ();      break;
       case 0x01: exe_LD_rp_nn (rm.B, rm.C); break;
@@ -167,7 +163,7 @@ Z80::tick() {
    // pending, add a new M1 Cycle to fetch and decode
    // next instruction
    if ( m_ops.empty() )
-      m_ops.addM1(m_reg.PC, m_reg.IR);
+      m_ops.addM1();
 
    // Now process next T-state in pending operations
    process_tstate( m_ops.pop() );
@@ -186,19 +182,16 @@ Z80::print(std::ostream& out) const {
    pr("HL", m_reg.main.HL); pr("HL'", m_reg.alt.HL); pr("DAT", m_data);    out << "\n";
    pr("IX",      m_reg.IX); pr("IY ",     m_reg.IY); out << "\n";
    pr("PC",      m_reg.PC); pr("SP ",     m_reg.SP); out << "\n";
-   pr(" I",      m_reg.I ); pr(" R ",     m_reg.R ); out << "\n";
-   pr("WZ", (m_reg.W << 8) | m_reg.Z);
-   pr("IR ",     m_reg.IR); out << "\n";
-   //out << "Signals |"<< std::bitset<16>((uint16_t)m_signals); // <<< This Allocs!
-   out << "Signals:";
-   if (! (m_signals & (uint16_t)Signal::M1))   out << "|M1";
-   if (! (m_signals & (uint16_t)Signal::MREQ)) out << "|MREQ";
-   if (! (m_signals & (uint16_t)Signal::IORQ)) out << "|IORQ";
-   if (! (m_signals & (uint16_t)Signal::RD))   out << "|RD";
-   if (! (m_signals & (uint16_t)Signal::WR))   out << "|WR";
-   if (! (m_signals & (uint16_t)Signal::RFSH)) out << "|RFSH";
-   if (! (m_signals & (uint16_t)Signal::HALT)) out << "|HALT";
-   if (! (m_signals & (uint16_t)Signal::WAIT)) out << "|WAIT";
+   pr("IR",      m_reg.IR); pr("WZ ",     m_reg.WZ); out << "\n";
+   out << "Signals:(" << m_signals << "):";
+   if ( m_signals & (uint16_t)Signal::M1   ) out << "|M1";
+   if ( m_signals & (uint16_t)Signal::MREQ ) out << "|MREQ";
+   if ( m_signals & (uint16_t)Signal::IORQ ) out << "|IORQ";
+   if ( m_signals & (uint16_t)Signal::RD   ) out << "|RD";
+   if ( m_signals & (uint16_t)Signal::WR   ) out << "|WR";
+   if ( m_signals & (uint16_t)Signal::RFSH ) out << "|RFSH";
+   if ( m_signals & (uint16_t)Signal::HALT ) out << "|HALT";
+   if ( m_signals & (uint16_t)Signal::WAIT ) out << "|WAIT";
    out << "|\n";
    out << "Ticks: " << std::dec << m_ticks << "\n";
 }
