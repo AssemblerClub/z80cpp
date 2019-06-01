@@ -32,7 +32,7 @@ Z80::exe_NOP () {
 void
 Z80::exe_HALT() {
    //std::cout << "HALT\n";
-   rstSignal(Signal::HALT);
+   m_nextM1 = &TVecOps::addHALTNOP;
 }
 
 void
@@ -163,7 +163,7 @@ Z80::tick() {
    // pending, add a new M1 Cycle to fetch and decode
    // next instruction
    if ( m_ops.empty() )
-      m_ops.addM1();
+      (m_ops.*m_nextM1)();
 
    // Now process next T-state in pending operations
    process_tstate( m_ops.pop() );

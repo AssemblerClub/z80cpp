@@ -10,6 +10,8 @@ namespace Z80CPP {
 // Z80 CPU Class Declaration
 //
 class Z80 {
+   using FNextM1 = void(TVecOps::*)();
+
    // Member variables
    uint16_t   m_signals = 0;     // Signal pins information (Positive logic (1=ON))
    uint16_t   m_address = 0;     // Address Bus information
@@ -17,7 +19,8 @@ class Z80 {
    uint8_t    m_io      = 0;     // I/O Bus information
    uint64_t   m_ticks   = 0;     // Total ticks of operation transcurred
    Registers  m_reg;             // Register Banks
-   TVecOps    m_ops = TVecOps(m_reg); // Queue of pending operations
+   TVecOps    m_ops = TVecOps(m_reg);     // Queue of pending operations
+   FNextM1    m_nextM1 = &TVecOps::addM1; // Next M1 Cycle operation to perform (for halt situations)
 
    // Private member functions
 
