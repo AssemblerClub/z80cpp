@@ -1,3 +1,9 @@
+;;
+;; PERFORMANCE TEST
+;;    Some instructions repeated 200 times to fill-up memory
+;; in order to let the user execute up to 16000 t-states and
+;; test how fast the emulator goes
+;;
 .area _DATA
 .area _CODE
 .rept 200
@@ -12,3 +18,4 @@
       LD L, #0x12
       LD (HL), D
 .endm
+HALT
