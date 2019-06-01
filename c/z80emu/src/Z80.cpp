@@ -102,17 +102,34 @@ Z80::exe_DEC_rp (uint16_t& reg) {
    m_ops.extendM1_6(TZ80Op(&Z80::dec, reg));
 }
 
+void
+Z80::exe_EX_rp_rp (uint16_t& r1, uint16_t& r2) {
+   uint16_t tmp = r1;
+   r1 = r2; r2 = tmp;
+}
+
+void
+Z80::exe_EXX () {
+   exe_EX_rp_rp(m_reg.main.BC, m_reg.alt.BC);
+   exe_EX_rp_rp(m_reg.main.DE, m_reg.alt.DE);
+   exe_EX_rp_rp(m_reg.main.HL, m_reg.alt.HL);
+}
+
 void 
 Z80::decode() {
    // Aliases for brevity
    auto&  r     = m_reg;
    auto&  rm    = r.main;
+   auto&  ra    = r.alt;
 
    // Instruction jump table   
    switch( m_data ) {
    //switch( m_reg.IR ) {
       // Basicos
       case 0x00: exe_NOP       ();            break;
+      case 0x08: exe_EX_rp_rp  (rm.AF, ra.AF);break;
+      case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);break;
+      case 0xD9: exe_EXX       ();            break;
 
       // 0x[0-3]1 [[ LD rp, nn ]]
       case 0x01: exe_LD_rp_nn  (rm.B , rm.C); break;
