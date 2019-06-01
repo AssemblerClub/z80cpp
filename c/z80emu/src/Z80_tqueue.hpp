@@ -176,6 +176,7 @@ class TVecOps {
 public:
    TVecOps(Registers& cr) : cpureg(cr) {}
    void addM1();
+   void addHALTNOP();
    void addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0);
    void addM4Write(uint16_t& addr, uint8_t& data);
 

@@ -4,21 +4,13 @@
 
 namespace Z80CPP {
 
-// Definition of static const signal groups
-const uint16_t MS_NOSIGNAL   = 0xFFFF;
-const uint16_t MS_M1         = (uint16_t)(~((uint16_t)Signal::M1));
-const uint16_t MS_MREQ       = (uint16_t)(~((uint16_t)Signal::MREQ));
-const uint16_t MS_MREQ_RD    = (uint16_t)(~((uint16_t)Signal::MREQ | (uint16_t)Signal::RD));
-const uint16_t MS_MREQ_WR    = (uint16_t)(~((uint16_t)Signal::MREQ | (uint16_t)Signal::WR));
-const uint16_t MS_MREQ_RD_M1 = (uint16_t)(MS_MREQ_RD & ~((uint16_t)Signal::M1));
-const uint16_t MS_MREQ_RFSH  = (uint16_t)(~((uint16_t)Signal::MREQ | (uint16_t)Signal::RFSH));
-const uint16_t MS_RFSH       = (uint16_t)(~((uint16_t)Signal::RFSH));
-
+// Const signals conversions to uint16_t for clarity and brevity
 const uint16_t S_M1     = (uint16_t)Signal::M1;
 const uint16_t S_MREQ   = (uint16_t)Signal::MREQ;
 const uint16_t S_RD     = (uint16_t)Signal::RD;
 const uint16_t S_WR     = (uint16_t)Signal::WR;
 const uint16_t S_RFSH   = (uint16_t)Signal::RFSH;
+const uint16_t S_HALT   = (uint16_t)Signal::HALT;
 
 void 
 TVecOps::addM1() {
@@ -31,6 +23,19 @@ TVecOps::addM1() {
    ops[last].set(S_MREQ | S_RFSH      , nullptr   , nullptr, nullptr, TZ80Op(&Z80::inc7, cpureg.R));
    inc(last);
 }
+
+void 
+TVecOps::addHALTNOP() {
+   ops[last].set(S_HALT | S_M1                 , &cpureg.PC, nullptr, nullptr, TZ80Op());
+   inc(last);
+   ops[last].set(S_HALT | S_M1 | S_MREQ | S_RD , nullptr   , nullptr, nullptr, TZ80Op());
+   inc(last);
+   ops[last].set(S_HALT | S_RFSH               , &cpureg.IR, nullptr, nullptr, TZ80Op());
+   inc(last);
+   ops[last].set(S_HALT | S_MREQ | S_RFSH      , nullptr   , nullptr, nullptr, TZ80Op(&Z80::inc7, cpureg.R));
+   inc(last);
+}
+
 
 void 
 TVecOps::addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0) {
