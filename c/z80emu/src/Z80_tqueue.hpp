@@ -35,8 +35,8 @@ struct Registers {
    REGPAIR(WZ,   W,   Z);
    REGPAIR(SP,   S,   P);
    REGPAIR(IR,   I,   R);
+   REGPAIR(BUF, BFh, BFl); // Data Buffer (not really on Z80, but useful)
    uint16_t PC;
-   uint8_t  DBUF;    // Data Buffer (not really on Z80, but useful)
    Registers() { 
       // Set all register memory to 0 at once
       std::memset(this, 0, sizeof(Registers));
@@ -59,11 +59,13 @@ struct TZ80Op {
       ,  VOID
       ,  _1PU8Ref
       ,  _1PU16Ref
+      ,  _2PU16Ref
    };
    // Type aliases for function pointers
    using VOIDFp      = void(Z80::*)(void);
    using _1PU8RefFp  = void(Z80::*)(uint8_t&);
    using _1PU16RefFp = void(Z80::*)(uint16_t&);
+   using _2PU16RefFp = void(Z80::*)(uint16_t&,uint16_t&);
 
    // Explicit constructors for functions types
    explicit TZ80Op()                : m_type(Type::NOP) {} 
@@ -72,6 +74,8 @@ struct TZ80Op {
       : m_type(Type::_1PU8Ref), m_f1u8r(f), m_f1u8r_p(&p) {}
    explicit TZ80Op( _1PU16RefFp f, uint16_t& p ) 
       : m_type(Type::_1PU16Ref), m_f1u16r(f), m_f1u16r_p(&p) {}
+   explicit TZ80Op( _2PU16RefFp f, uint16_t& p1, uint16_t& p2 ) 
+      : m_type(Type::_2PU16Ref), m_f2u16r(f), m_f2u16r_p1(&p1), m_f2u16r_p2(&p2) {}
 
    // Set new function and type
    void reset() {
@@ -91,6 +95,12 @@ struct TZ80Op {
       m_f1u16r = f;
       m_f1u16r_p = &p;
    }
+   void set( _2PU16RefFp f, uint16_t& p1, uint16_t& p2 ) { 
+      m_type = Type::_2PU16Ref;
+      m_f2u16r = f;
+      m_f2u16r_p1 = &p1;
+      m_f2u16r_p2 = &p2;
+   }
 
    // Call contained function
    void operator()(Z80& cpu) const {
@@ -99,6 +109,7 @@ struct TZ80Op {
          case Type::VOID:      (cpu.*m_fv    )(); break;
          case Type::_1PU8Ref:  (cpu.*m_f1u8r )(*m_f1u8r_p ); break;
          case Type::_1PU16Ref: (cpu.*m_f1u16r)(*m_f1u16r_p); break;
+         case Type::_2PU16Ref: (cpu.*m_f2u16r)(*m_f2u16r_p1, *m_f2u16r_p2); break;
          case Type::NOP: break;         
       }
    }
@@ -119,6 +130,12 @@ private:
       struct {
          _1PU16RefFp  m_f1u16r;
          uint16_t*    m_f1u16r_p;
+      };
+      // Type 3: Void function, 2 16-bits parameter by reference
+      struct {
+         _2PU16RefFp  m_f2u16r;
+         uint16_t*    m_f2u16r_p1;
+         uint16_t*    m_f2u16r_p2;
       };
    };
 };
@@ -178,9 +195,10 @@ public:
    TVecOps(Registers& cr) : cpureg(cr) {}
    void addM1();
    void addHALTNOP();
-   void addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0);
+   void addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0 = TZ80Op());
    void addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t = TZ80Op());
-   void extendM1_6(TZ80Op&& t0 = TZ80Op(), TZ80Op&& t1 = TZ80Op());
+   void extendM(TZ80Op&& t = TZ80Op());
+
 
    void add(TState& newop) { ops[last] = newop; inc(last);        }
    const TState&  get()    { return ops[next];                    }
