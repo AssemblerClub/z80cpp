@@ -52,14 +52,14 @@ TVecOps::addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0) {
 }
 
 void 
-TVecOps::addM4Write(uint16_t& addr, uint8_t& data) {
+TVecOps::addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t) {
    // Default Machine Write Cycle (By default, writes to (PC))
    //|      M3           |
    //| MREQ | WR  | DIN  | 
    //|     -DOUT-----    |
    ops[last].set(0            , &addr   , nullptr  , nullptr, TZ80Op());
    inc(last);
-   ops[last].set(S_MREQ       , nullptr , &data    , nullptr, TZ80Op());
+   ops[last].set(S_MREQ       , nullptr , &data    , nullptr, std::move(t));
    inc(last);
    ops[last].set(S_MREQ | S_WR, nullptr , nullptr  , nullptr, TZ80Op());
    inc(last);

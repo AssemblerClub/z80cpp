@@ -36,6 +36,7 @@ struct Registers {
    REGPAIR(SP,   S,   P);
    REGPAIR(IR,   I,   R);
    uint16_t PC;
+   uint8_t  DBUF;    // Data Buffer (not really on Z80, but useful)
    Registers() { 
       // Set all register memory to 0 at once
       std::memset(this, 0, sizeof(Registers));
@@ -166,7 +167,7 @@ struct TState {
 // vector of pending operations (t-states) to perform
 //
 class TVecOps {
-   static constexpr uint8_t length = 24;
+   static constexpr uint8_t length = 32;
    std::array<TState, length> ops;
    uint8_t next = 0;
    uint8_t last = 0;
@@ -178,7 +179,7 @@ public:
    void addM1();
    void addHALTNOP();
    void addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0);
-   void addM4Write(uint16_t& addr, uint8_t& data);
+   void addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t = TZ80Op());
 
    void add(TState& newop) { ops[last] = newop; inc(last);        }
    const TState&  get()    { return ops[next];                    }
