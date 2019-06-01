@@ -27,15 +27,21 @@ class Z80 {
    // Z80 T-state processing operations
    void  process_tstate (const TState& t);
 
+   void  read2BytesFrom(uint8_t& rdhi, uint8_t& rdlo, uint16_t& rs16);
+
    // Z80 Instructions (Execution)
-   void  exe_NOP      (); 
-   void  exe_HALT     ();
-   void  exe_LD_r_r   (uint8_t& rd, uint8_t& rs);
-   void  exe_LD_r_n   (uint8_t& reg);
-   void  exe_LD_IrpI_n(uint16_t& reg);
-   void  exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8);
-   void  exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16);
-   void  exe_LD_rp_nn (uint8_t& rhi, uint8_t& rlo);
+   void  exe_NOP       (); 
+   void  exe_HALT      ();
+   void  exe_LD_r_r    (uint8_t& rd, uint8_t& rs);
+   void  exe_LD_r_n    (uint8_t& reg);
+   void  exe_LD_r_InnI (uint8_t& rd8);
+   void  exe_LD_r_IrpI (uint8_t& rd8, uint16_t& rs16);
+   void  exe_LD_rp_nn  (uint8_t& rhi, uint8_t& rlo);
+   void  exe_LD_rp_InnI(uint8_t& rhi, uint8_t& rlo);
+   void  exe_LD_IrpI_n (uint16_t& reg);
+   void  exe_LD_IrpI_r (uint16_t& rd16, uint8_t& rs8);
+   void  exe_LD_InnI_r (uint8_t& rs8);
+   void  exe_LD_InnI_rp(uint8_t& rhi, uint8_t& rlo);
 public:
    Z80() = default;
    void     setData(uint8_t in)  { m_data = in; }

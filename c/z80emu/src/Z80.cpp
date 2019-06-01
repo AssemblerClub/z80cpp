@@ -24,6 +24,39 @@ Z80::exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16) {
    m_ops.addM23Read(rs16, rd8, TZ80Op());
 }
 
+void 
+Z80::read2BytesFrom(uint8_t& rdhi, uint8_t& rdlo, uint16_t& rs16) {
+   m_ops.addM23Read (rs16, rdlo, TZ80Op(&Z80::inc, rs16));
+   m_ops.addM23Read (rs16, rdhi, TZ80Op(&Z80::inc, rs16));
+}
+
+void 
+Z80::exe_LD_InnI_r(uint8_t& rs8) {
+   read2BytesFrom   (m_reg.W, m_reg.Z, m_reg.PC);
+   m_ops.addM45Write(m_reg.WZ, rs8, TZ80Op(&Z80::inc, m_reg.WZ));
+}
+
+void 
+Z80::exe_LD_InnI_rp(uint8_t& rhi, uint8_t& rlo) {
+   read2BytesFrom   (m_reg.W, m_reg.Z, m_reg.PC);
+   m_ops.addM45Write(m_reg.WZ,     rlo, TZ80Op(&Z80::inc, m_reg.WZ));
+   m_ops.addM45Write(m_reg.WZ,     rhi, TZ80Op(&Z80::inc, m_reg.WZ));
+}
+
+void 
+Z80::exe_LD_r_InnI(uint8_t& rd8) {
+   read2BytesFrom  (m_reg.W, m_reg.Z, m_reg.PC);
+   m_ops.addM23Read(m_reg.WZ,     rd8, TZ80Op(&Z80::inc, m_reg.WZ));
+}
+
+void 
+Z80::exe_LD_rp_InnI(uint8_t& rhi, uint8_t& rlo) {
+   read2BytesFrom  (m_reg.W, m_reg.Z, m_reg.PC);
+   m_ops.addM23Read(m_reg.WZ,     rlo, TZ80Op(&Z80::inc, m_reg.WZ));
+   m_ops.addM23Read(m_reg.WZ,     rhi, TZ80Op(&Z80::inc, m_reg.WZ));
+}
+
+
 void
 Z80::exe_NOP () {
    // std::cout << "NOP\n";
@@ -44,19 +77,18 @@ Z80::exe_LD_r_r(uint8_t& rd, uint8_t& rs) {
 
 void 
 Z80::exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8) {
-   m_ops.addM4Write(rd16, rs8);
+   m_ops.addM45Write(rd16, rs8);
 }
 
 void
 Z80::exe_LD_rp_nn(uint8_t& rhi, uint8_t& rlo) {
-   m_ops.addM23Read(m_reg.PC, rlo, TZ80Op(&Z80::inc, m_reg.PC));
-   m_ops.addM23Read(m_reg.PC, rhi, TZ80Op(&Z80::inc, m_reg.PC));
+   read2BytesFrom(rhi, rlo, m_reg.PC);
 }
 
 void 
 Z80::exe_LD_IrpI_n(uint16_t& reg) {
-   exe_LD_r_n   (m_reg.W);
-   exe_LD_IrpI_r(reg, m_reg.W);
+   exe_LD_r_n   (m_reg.DBUF);
+   exe_LD_IrpI_r(reg, m_reg.DBUF);
 }
 
 void 
@@ -69,19 +101,40 @@ Z80::decode() {
    switch( m_data ) {
    //switch( m_reg.IR ) {
       // Basicos
-      case 0x00: exe_NOP      ();      break;
-      case 0x01: exe_LD_rp_nn (rm.B, rm.C); break;
-      case 0x11: exe_LD_rp_nn (rm.D, rm.E); break;
-      case 0x21: exe_LD_rp_nn (rm.H, rm.L); break;
-      case 0x31: exe_LD_rp_nn ( r.S,  r.P); break;
+      case 0x00: exe_NOP       ();            break;
+
+      // 0x[0-3]1 [[ LD rp, nn ]]
+      case 0x01: exe_LD_rp_nn  (rm.B , rm.C); break;
+      case 0x11: exe_LD_rp_nn  (rm.D , rm.E); break;
+      case 0x21: exe_LD_rp_nn  (rm.H , rm.L); break;
+      case 0x31: exe_LD_rp_nn  ( r.S ,  r.P); break;
+
+      // 0x[0-1]A [[ LD a, (rp) ]]
+      case 0x0A: exe_LD_r_IrpI (rm.A ,rm.BC); break;
+      case 0x1A: exe_LD_r_IrpI (rm.A ,rm.DE); break;
+      // 0x2A [[ LD hl, (nn) ]]
+      case 0x2A: exe_LD_rp_InnI(rm.H , rm.L); break;
+      // 0x3A [[ LD  a, (nn) ]]
+      case 0x3A: exe_LD_r_InnI (rm.A);        break;
+
+      // 0x[0-1]2 [[ LD (rp), r ]] 
+      case 0x02: exe_LD_IrpI_r (rm.BC, rm.A); break;
+      case 0x12: exe_LD_IrpI_r (rm.DE, rm.A); break;
+      // 0x[2-3]2 [[ LD (nn), rp/r ]] 
+      case 0x22: exe_LD_InnI_rp(rm.H , rm.L); break;
+      case 0x32: exe_LD_InnI_r (rm.A);        break;
+
+      // 0x[0-3][6|E] [[ LD r, n ]] 
       case 0x06: exe_LD_r_n   (rm.B ); break;
-      case 0x0E: exe_LD_r_n   (rm.C ); break;
       case 0x16: exe_LD_r_n   (rm.D ); break;
-      case 0x1E: exe_LD_r_n   (rm.E ); break;
       case 0x26: exe_LD_r_n   (rm.H ); break;
+      case 0x0E: exe_LD_r_n   (rm.C ); break;
+      case 0x1E: exe_LD_r_n   (rm.E ); break;
       case 0x2E: exe_LD_r_n   (rm.L ); break;
-      case 0x36: exe_LD_IrpI_n(rm.HL); break;
       case 0x3E: exe_LD_r_n   (rm.A ); break;
+      // 0x[36] [[ LD (HL), n ]] 
+      case 0x36: exe_LD_IrpI_n(rm.HL); break;
+
       // 0x40-0x47 [[ LD B, r ]]
       case 0x40: exe_LD_r_r   (rm.B, rm.B ); break;
       case 0x41: exe_LD_r_r   (rm.B, rm.C ); break;
