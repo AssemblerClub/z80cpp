@@ -31,7 +31,7 @@
 # CONFIGURATION
 CC      := clang++
 CXXFLAGS:= -O3 -Wall -pedantic -std=c++17 -Wno-gnu-anonymous-struct -Wno-nested-anon-types
-#CXXFLAGS:= -g 
+#CXXFLAGS:= -g -Wall -pedantic -std=c++17 -Wno-gnu-anonymous-struct -Wno-nested-anon-types
 INCDIRS := -Isrc
 LINKLIBS:=
 PROJNAME:= z80emu
