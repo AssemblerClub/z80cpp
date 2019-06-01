@@ -33,6 +33,7 @@ class Z80 {
    void  exe_NOP       (); 
    void  exe_HALT      ();
    void  exe_LD_r_r    (uint8_t& rd, uint8_t& rs);
+   void  exe_LD_rp_rp  (uint16_t& rd, uint16_t& rs);
    void  exe_LD_r_n    (uint8_t& reg);
    void  exe_LD_r_InnI (uint8_t& rd8);
    void  exe_LD_r_IrpI (uint8_t& rd8, uint16_t& rs16);

@@ -58,22 +58,23 @@ Z80::exe_LD_rp_InnI(uint8_t& rhi, uint8_t& rlo) {
 
 
 void
-Z80::exe_NOP () {
-   // std::cout << "NOP\n";
-}
+Z80::exe_NOP () {}
 
 void
 Z80::exe_HALT() {
-   //std::cout << "HALT\n";
    m_nextM1 = &TVecOps::addHALTNOP;
 }
 
 void
 Z80::exe_LD_r_r(uint8_t& rd, uint8_t& rs) {
-   // Simple LD r, r. Just assign registers
-   //std::cout << "LD r, r\n";
    rd = rs;
 }
+
+void
+Z80::exe_LD_rp_rp (uint16_t& rd, uint16_t& rs) {
+   rd = rs;  
+}
+
 
 void 
 Z80::exe_LD_IrpI_r(uint16_t& rd16, uint8_t& rs8) {
@@ -207,6 +208,9 @@ Z80::decode() {
       case 0x7D: exe_LD_r_r   (rm.A, rm.L ); break;
       case 0x7E: exe_LD_r_IrpI(rm.A, rm.HL); break;
       case 0x7F: exe_LD_r_r   (rm.A, rm.A ); break;
+
+      // 0xF9
+      case 0xF9: exe_LD_rp_rp (r.SP, rm.HL); break;
    }
 }
 
