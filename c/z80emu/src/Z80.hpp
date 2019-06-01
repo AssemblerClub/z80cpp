@@ -36,6 +36,7 @@ class Z80 {
    void  exe_HALT      ();
    void  exe_EX_rp_rp  (uint16_t& r1, uint16_t& r2);
    void  exe_EXX       ();
+   void  exe_EX_ISPI_rp(uint16_t& rd16, uint8_t& rhi, uint8_t& rlo);
    // Load
    void  exe_LD_r_r    (uint8_t& rd, uint8_t& rs);
    void  exe_LD_rp_rp  (uint16_t& rd, uint16_t& rs);
@@ -71,6 +72,7 @@ public:
    void  inc(uint8_t& reg)       { ++reg; }
    void  inc(uint16_t& reg)      { ++reg; }
    void  dec(uint16_t& reg)      { --reg; }
+   void  assign(uint16_t& rd, uint16_t& rs) { rd = rs; }
    void  data_in(uint8_t& reg);
 
    void tick();

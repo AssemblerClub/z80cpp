@@ -21,7 +21,7 @@ Z80::exe_LD_r_n(uint8_t& reg) {
 
 void 
 Z80::exe_LD_r_IrpI(uint8_t& rd8, uint16_t& rs16) {
-   m_ops.addM23Read(rs16, rd8, TZ80Op());
+   m_ops.addM23Read(rs16, rd8);
 }
 
 void 
@@ -52,8 +52,7 @@ Z80::exe_LD_r_InnI(uint8_t& rd8) {
 void 
 Z80::exe_LD_rp_InnI(uint8_t& rhi, uint8_t& rlo) {
    read2BytesFrom  (m_reg.W, m_reg.Z, m_reg.PC);
-   m_ops.addM23Read(m_reg.WZ,     rlo, TZ80Op(&Z80::inc, m_reg.WZ));
-   m_ops.addM23Read(m_reg.WZ,     rhi, TZ80Op(&Z80::inc, m_reg.WZ));
+   read2BytesFrom  (    rhi,     rlo, m_reg.WZ);
 }
 
 
@@ -88,24 +87,38 @@ Z80::exe_LD_rp_nn(uint8_t& rhi, uint8_t& rlo) {
 
 void 
 Z80::exe_LD_IrpI_n(uint16_t& reg) {
-   exe_LD_r_n   (m_reg.DBUF);
-   exe_LD_IrpI_r(reg, m_reg.DBUF);
+   exe_LD_r_n   (m_reg.BFl);
+   exe_LD_IrpI_r(reg, m_reg.BFl);
 }
 
 void
 Z80::exe_INC_rp (uint16_t& reg) {
-   m_ops.extendM1_6(TZ80Op(&Z80::inc, reg));
+   m_ops.extendM(TZ80Op(&Z80::inc, reg));
+   m_ops.extendM();
 }
 
 void
 Z80::exe_DEC_rp (uint16_t& reg) {
-   m_ops.extendM1_6(TZ80Op(&Z80::dec, reg));
+   m_ops.extendM(TZ80Op(&Z80::dec, reg));
+   m_ops.extendM();
 }
 
 void
 Z80::exe_EX_rp_rp (uint16_t& r1, uint16_t& r2) {
    uint16_t tmp = r1;
    r1 = r2; r2 = tmp;
+}
+
+void
+Z80::exe_EX_ISPI_rp (uint16_t& rd16, uint8_t& rhi, uint8_t& rlo) {
+   m_reg.BUF = m_reg.SP + 1; // Should be done with WZ
+   m_ops.addM23Read (m_reg.SP , m_reg.Z);
+   m_ops.addM23Read (m_reg.BUF, m_reg.W);
+   m_ops.extendM();
+   m_ops.addM45Write(m_reg.BUF, rhi);
+   m_ops.addM45Write(m_reg.SP,  rlo);
+   m_ops.extendM( TZ80Op(&Z80::assign, rd16, m_reg.WZ) );
+   m_ops.extendM();
 }
 
 void
@@ -129,6 +142,7 @@ Z80::decode() {
       case 0x00: exe_NOP       ();            break;
       case 0x08: exe_EX_rp_rp  (rm.AF, ra.AF);break;
       case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);break;
+      case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L); break;
       case 0xD9: exe_EXX       ();            break;
 
       // 0x[0-3]1 [[ LD rp, nn ]]
