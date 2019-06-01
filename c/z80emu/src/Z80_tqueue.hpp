@@ -180,6 +180,7 @@ public:
    void addHALTNOP();
    void addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0);
    void addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t = TZ80Op());
+   void extendM1_6(TZ80Op&& t0 = TZ80Op(), TZ80Op&& t1 = TZ80Op());
 
    void add(TState& newop) { ops[last] = newop; inc(last);        }
    const TState&  get()    { return ops[next];                    }

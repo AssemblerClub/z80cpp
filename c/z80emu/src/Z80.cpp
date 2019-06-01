@@ -92,6 +92,16 @@ Z80::exe_LD_IrpI_n(uint16_t& reg) {
    exe_LD_IrpI_r(reg, m_reg.DBUF);
 }
 
+void
+Z80::exe_INC_rp (uint16_t& reg) {
+   m_ops.extendM1_6(TZ80Op(&Z80::inc, reg));
+}
+
+void
+Z80::exe_DEC_rp (uint16_t& reg) {
+   m_ops.extendM1_6(TZ80Op(&Z80::dec, reg));
+}
+
 void 
 Z80::decode() {
    // Aliases for brevity
@@ -124,6 +134,19 @@ Z80::decode() {
       // 0x[2-3]2 [[ LD (nn), rp/r ]] 
       case 0x22: exe_LD_InnI_rp(rm.H , rm.L); break;
       case 0x32: exe_LD_InnI_r (rm.A);        break;
+
+      // 0x[0-4]3 [[ inc rp ]] 
+      case 0x03: exe_INC_rp (rm.BC); break;
+      case 0x13: exe_INC_rp (rm.DE); break;
+      case 0x23: exe_INC_rp (rm.HL); break;
+      case 0x33: exe_INC_rp ( r.SP); break;
+
+      // 0x[0-4]B [[ dec rp ]] 
+      case 0x0B: exe_DEC_rp (rm.BC); break;
+      case 0x1B: exe_DEC_rp (rm.DE); break;
+      case 0x2B: exe_DEC_rp (rm.HL); break;
+      case 0x3B: exe_DEC_rp ( r.SP); break;
+
 
       // 0x[0-3][6|E] [[ LD r, n ]] 
       case 0x06: exe_LD_r_n   (rm.B ); break;

@@ -30,8 +30,12 @@ class Z80 {
    void  read2BytesFrom(uint8_t& rdhi, uint8_t& rdlo, uint16_t& rs16);
 
    // Z80 Instructions (Execution)
+
+   // Basic
    void  exe_NOP       (); 
    void  exe_HALT      ();
+
+   // Load
    void  exe_LD_r_r    (uint8_t& rd, uint8_t& rs);
    void  exe_LD_rp_rp  (uint16_t& rd, uint16_t& rs);
    void  exe_LD_r_n    (uint8_t& reg);
@@ -43,6 +47,10 @@ class Z80 {
    void  exe_LD_IrpI_r (uint16_t& rd16, uint8_t& rs8);
    void  exe_LD_InnI_r (uint8_t& rs8);
    void  exe_LD_InnI_rp(uint8_t& rhi, uint8_t& rlo);
+
+   // INC/DEC
+   void  exe_INC_rp (uint16_t& reg);
+   void  exe_DEC_rp (uint16_t& reg);
 public:
    Z80() = default;
    void     setData(uint8_t in)  { m_data = in; }
@@ -61,6 +69,7 @@ public:
    void  inc7(uint8_t& reg)      { reg = (reg+1) & 0x7F; }
    void  inc(uint8_t& reg)       { ++reg; }
    void  inc(uint16_t& reg)      { ++reg; }
+   void  dec(uint16_t& reg)      { --reg; }
    void  data_in(uint8_t& reg);
 
    void tick();

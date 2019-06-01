@@ -65,5 +65,13 @@ TVecOps::addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t) {
    inc(last);
 }
 
+void 
+TVecOps::extendM1_6(TZ80Op&& t0, TZ80Op&& t1) {
+   // 2 cycles extended M1
+   ops[last].set(0 , nullptr , nullptr , nullptr, std::move(t0));
+   inc(last);
+   ops[last].set(0 , nullptr , nullptr , nullptr, std::move(t1));
+   inc(last);   
+}
 
 } // Namespace Z80CPP
