@@ -153,6 +153,7 @@ enum class Signal : uint16_t {
    ,  RFSH  = 0x0200
    ,  HALT  = 0x0100
    ,  WAIT  = 0x0080
+   ,  WSAMP = 0x0040  //< WAIT SAMPLE DOES NOT EXIST IN THE Z80 (Just used to know when it has to sample WAIT INPUT SIGNAL)
 };
 
 //
@@ -200,10 +201,13 @@ public:
    void extendM(TZ80Op&& t = TZ80Op());
 
 
-   void add(TState& newop) { ops[last] = newop; inc(last);        }
-   const TState&  get()    { return ops[next];                    }
-   const TState&  pop()    { auto& t=get(); inc(next); return t;  }
-   bool           empty()  { return next == last;                 }
+   void add(TState& newop)       { ops[last] = newop; inc(last);        }
+   const TState&  get()          { return ops[next];                    }
+   void  pop(bool WAIT) { 
+      if ( !WAIT || !(ops[next].signals & (uint16_t)Signal::WSAMP) ) 
+         inc(next);
+   }
+   bool           empty()        { return next == last;                 }
 };
 
 } // Namespace Z80CPP
