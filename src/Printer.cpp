@@ -26,7 +26,7 @@ Printer::printCPUStatus(const Z80& cpu) {
    pr("HL", rm.HL); pr("HL'", ra.HL); pr("DAT", cpu.data());    m_out << "\n";
    pr("IX",  r.IX); pr("IY ",  r.IY); m_out << "\n";
    pr("PC",  r.PC); pr("SP ",  r.SP); m_out << "\n";
-   pr("IR",  r.IR); pr("WZ ",  r.WZ); m_out << "\n";
+   pr("IR",  r.IR); pr("WZ ",  r.WZ); pr("BUF", r.BUF); m_out << "\n";
    m_out << "Signals:(" << cpu.signals() << "):";
    if ( cpu.signal(Signal::M1)    ) m_out << "|M1";
    if ( cpu.signal(Signal::MREQ)  ) m_out << "|MREQ";
