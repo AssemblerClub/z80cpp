@@ -15,6 +15,5 @@ LD L, C
 LD (HL), C
 LD L, #0x12
 LD (HL), D
-HALT
-HALT
+.ds 4       ;; 4 0's
 HALT
