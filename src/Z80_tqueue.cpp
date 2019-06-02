@@ -53,6 +53,16 @@ TVecOps::addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0) {
 }
 
 void 
+TVecOps::addM3alu(uint8_t ts, TZ80Op&& tend) {
+   while(--ts) {
+      ops[last].set(0, nullptr, nullptr, nullptr, TZ80Op());
+      inc(last);
+   }
+   ops[last].set(0, nullptr, nullptr, nullptr, std::move(tend));
+   inc(last);
+}
+
+void 
 TVecOps::addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t) {
    // Default Machine Write Cycle (By default, writes to (PC))
    //|      M3           |
