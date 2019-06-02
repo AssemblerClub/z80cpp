@@ -4,11 +4,13 @@
 #include <Memory.hpp>
 #include <Z80.hpp>
 #include <Timer.hpp>
+#include <Printer.hpp>
 
 class Computer {
    static const uint16_t MS_MAXMEM = 4096;
    Z80CPP::Z80      m_cpu;
    Z80CPP::Memory   m_mem = Z80CPP::Memory(MS_MAXMEM);
+   Z80CPP::Printer  m_print = Z80CPP::Printer(std::cout);
 
 public:
    Computer() = default;
@@ -35,9 +37,10 @@ public:
       }
    }
 
-   void print(std::ostream& out, uint16_t addr) {
-      m_cpu.print(out);
-      m_mem.print(out, addr & 0xFFF0, 2);      
+   void printStatus() {
+      // Print CPU and Memory
+      m_print.printCPUStatus(m_cpu);
+      m_print.printMemoryContents(m_mem, m_cpu.address(), 3);
    }
 
    void gettoken(std::string& tok, std::string& com, char delim) {
@@ -65,7 +68,7 @@ public:
    void run() {
       std::string command;
       std::string token;
-      print(std::cout, m_cpu.pc());
+      printStatus();
       do {
          std::getline(std::cin, command);
          gettoken(token, command, ' ');
@@ -74,12 +77,12 @@ public:
             if ( !command.empty() ) 
                steps = std::stoul(command);
             doNsteps(steps);
-            print(std::cout, m_cpu.pc());
+            printStatus();
          } else if (token == "m") {
             uint16_t addr = 0;
             if ( !command.empty() ) 
                addr = std::stoul(command, nullptr, 0);
-            m_mem.print(std::cout, addr & 0xFFF0, 2);
+            m_print.printMemoryContents(m_mem, m_cpu.address(), 3);
          }
       } while (token != "q");
    }
