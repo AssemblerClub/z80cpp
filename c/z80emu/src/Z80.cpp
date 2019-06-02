@@ -5,7 +5,7 @@ namespace Z80CPP {
 
 void
 Z80::process_tstate (const TState& t) {
-   m_signals = t.signals;
+   m_signals = t.signals | m_in_signals;
    if (t.addr)        m_address = *t.addr;
    if (t.data)        m_data    = *t.data;
    if (t.io)          m_io      = *t.io;
@@ -137,8 +137,7 @@ Z80::decode() {
 
    // Instruction jump table   
    switch( m_data ) {
-   //switch( m_reg.IR ) {
-      // Basicos
+      // Basics
       case 0x00: exe_NOP       ();            break;
       case 0x08: exe_EX_rp_rp  (rm.AF, ra.AF);break;
       case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);break;
@@ -277,7 +276,8 @@ Z80::tick() {
       (m_ops.*m_nextM1)();
 
    // Now process next T-state in pending operations
-   process_tstate( m_ops.pop() );
+   process_tstate( m_ops.get() );
+   m_ops.pop( m_signals & (uint16_t)Signal::WAIT );
    ++m_ticks;
 }
 
@@ -295,14 +295,15 @@ Z80::print(std::ostream& out) const {
    pr("PC",      m_reg.PC); pr("SP ",     m_reg.SP); out << "\n";
    pr("IR",      m_reg.IR); pr("WZ ",     m_reg.WZ); out << "\n";
    out << "Signals:(" << m_signals << "):";
-   if ( m_signals & (uint16_t)Signal::M1   ) out << "|M1";
-   if ( m_signals & (uint16_t)Signal::MREQ ) out << "|MREQ";
-   if ( m_signals & (uint16_t)Signal::IORQ ) out << "|IORQ";
-   if ( m_signals & (uint16_t)Signal::RD   ) out << "|RD";
-   if ( m_signals & (uint16_t)Signal::WR   ) out << "|WR";
-   if ( m_signals & (uint16_t)Signal::RFSH ) out << "|RFSH";
-   if ( m_signals & (uint16_t)Signal::HALT ) out << "|HALT";
-   if ( m_signals & (uint16_t)Signal::WAIT ) out << "|WAIT";
+   if ( m_signals & (uint16_t)Signal::M1    ) out << "|M1";
+   if ( m_signals & (uint16_t)Signal::MREQ  ) out << "|MREQ";
+   if ( m_signals & (uint16_t)Signal::IORQ  ) out << "|IORQ";
+   if ( m_signals & (uint16_t)Signal::RD    ) out << "|RD";
+   if ( m_signals & (uint16_t)Signal::WR    ) out << "|WR";
+   if ( m_signals & (uint16_t)Signal::RFSH  ) out << "|RFSH";
+   if ( m_signals & (uint16_t)Signal::HALT  ) out << "|HALT";
+   if ( m_signals & (uint16_t)Signal::WAIT  ) out << "|WAIT";
+   if ( m_signals & (uint16_t)Signal::WSAMP ) out << "|WSMP";
    out << "|\n";
    out << "Ticks: " << std::dec << m_ticks << "\n";
 }

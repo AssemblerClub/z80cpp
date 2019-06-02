@@ -13,7 +13,8 @@ class Z80 {
    using FNextM1 = void(TVecOps::*)();
 
    // Member variables
-   uint16_t   m_signals = 0;     // Signal pins information (Positive logic (1=ON))
+   uint16_t   m_signals    = 0;  // Signal pins information (Positive logic (1=ON))
+   uint16_t   m_in_signals = 0;  // Only input signals (Positive logic (1=ON))
    uint16_t   m_address = 0;     // Address Bus information
    uint8_t    m_data    = 0;     // Data Bus information 
    uint8_t    m_io      = 0;     // I/O Bus information
@@ -56,8 +57,8 @@ class Z80 {
 public:
    Z80() = default;
    void     setData(uint8_t in)  { m_data = in; }
-   void     setSignal(Signal s)  { m_signals |=  (uint16_t)s; }
-   void     rstSignal(Signal s)  { m_signals &= ~(uint16_t)s; }
+   void     setSignal(Signal s)  { m_in_signals |=  (uint16_t)s; }
+   void     rstSignal(Signal s)  { m_in_signals &= ~(uint16_t)s; }
    bool     signal(Signal s)     { return m_signals & (uint16_t)s; }
    uint8_t  data()               { return m_data; }
    uint16_t address()            { return m_address; }
