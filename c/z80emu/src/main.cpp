@@ -14,6 +14,13 @@ public:
    Computer() = default;
 
    void step() {
+      static uint8_t wait = 2;
+
+      // Activate WAIT signal
+      wait = ++wait & 0x3;
+      if (wait) m_cpu.setSignal(Z80CPP::Signal::WAIT);
+      else      m_cpu.rstSignal(Z80CPP::Signal::WAIT);
+
       // Tick the CPU
       m_cpu.tick();
 
