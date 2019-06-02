@@ -6,6 +6,9 @@
 
 namespace Z80CPP {
 
+// Foward declares
+class Printer;
+
 //
 // Z80 CPU Class Declaration
 //
@@ -56,16 +59,17 @@ class Z80 {
    void  exe_DEC_rp (uint16_t& reg);
 public:
    Z80() = default;
-   void     setData(uint8_t in)  { m_data = in; }
-   void     setSignal(Signal s)  { m_in_signals |=  (uint16_t)s; }
-   void     rstSignal(Signal s)  { m_in_signals &= ~(uint16_t)s; }
-   bool     signal(Signal s)     { return m_signals & (uint16_t)s; }
-   uint8_t  data()               { return m_data; }
-   uint16_t address()            { return m_address; }
-   uint64_t ticks()              { return m_ticks; }
-   void     setPC(uint16_t pc)   { m_reg.PC = pc;  }
-   uint16_t pc()                 { return m_reg.PC;  }
-   //Registers& reg()              { return m_reg; }
+   void     setData(uint8_t in)     { m_data = in; }
+   void     setSignal(Signal s)     { m_in_signals |=  (uint16_t)s; }
+   void     rstSignal(Signal s)     { m_in_signals &= ~(uint16_t)s; }
+   bool     signal(Signal s) const  { return m_signals & (uint16_t)s; }
+   uint16_t signals() const         { return (uint16_t)m_signals; }
+   uint8_t  data() const            { return m_data; }
+   uint16_t address() const         { return m_address; }
+   uint64_t ticks() const           { return m_ticks; }
+   void     setPC(uint16_t pc)      { m_reg.PC = pc;  }
+   uint16_t pc() const              { return m_reg.PC;  }
+   const Registers& registers() const { return m_reg; }
 
    // Processing operations
    void  decode();
@@ -77,7 +81,6 @@ public:
    void  data_in(uint8_t& reg);
 
    void tick();
-   void print(std::ostream& out) const;
 };
 
 }; // Namespace Z80CPP

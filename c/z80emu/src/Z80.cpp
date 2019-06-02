@@ -1,5 +1,4 @@
 #include <Z80.hpp>
-#include <Printer.hpp>
 
 namespace Z80CPP {
 
@@ -279,33 +278,6 @@ Z80::tick() {
    process_tstate( m_ops.get() );
    m_ops.pop( m_signals & (uint16_t)Signal::WAIT );
    ++m_ticks;
-}
-
-void 
-Z80::print(std::ostream& out) const {
-   Printer p(out);
-   auto pr = [&p](const char*n, uint16_t r) { p.printRegister(n, r); };
-   
-   out << "------------------------------------\n";
-   pr("AF", m_reg.main.AF); pr("AF'", m_reg.alt.AF); out << "   BUS\n";
-   pr("BC", m_reg.main.BC); pr("BC'", m_reg.alt.BC); out << "---------\n";
-   pr("DE", m_reg.main.DE); pr("DE'", m_reg.alt.DE); pr("ADD", m_address); out << "\n";
-   pr("HL", m_reg.main.HL); pr("HL'", m_reg.alt.HL); pr("DAT", m_data);    out << "\n";
-   pr("IX",      m_reg.IX); pr("IY ",     m_reg.IY); out << "\n";
-   pr("PC",      m_reg.PC); pr("SP ",     m_reg.SP); out << "\n";
-   pr("IR",      m_reg.IR); pr("WZ ",     m_reg.WZ); out << "\n";
-   out << "Signals:(" << m_signals << "):";
-   if ( m_signals & (uint16_t)Signal::M1    ) out << "|M1";
-   if ( m_signals & (uint16_t)Signal::MREQ  ) out << "|MREQ";
-   if ( m_signals & (uint16_t)Signal::IORQ  ) out << "|IORQ";
-   if ( m_signals & (uint16_t)Signal::RD    ) out << "|RD";
-   if ( m_signals & (uint16_t)Signal::WR    ) out << "|WR";
-   if ( m_signals & (uint16_t)Signal::RFSH  ) out << "|RFSH";
-   if ( m_signals & (uint16_t)Signal::HALT  ) out << "|HALT";
-   if ( m_signals & (uint16_t)Signal::WAIT  ) out << "|WAIT";
-   if ( m_signals & (uint16_t)Signal::WSAMP ) out << "|WSMP";
-   out << "|\n";
-   out << "Ticks: " << std::dec << m_ticks << "\n";
 }
 
 }; // Namespace Z80CPP
