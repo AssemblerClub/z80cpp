@@ -57,6 +57,9 @@ class Z80 {
    // INC/DEC
    void  exe_INC_rp (uint16_t& reg);
    void  exe_DEC_rp (uint16_t& reg);
+
+   // JUMP
+   void  exe_JR_n ();
 public:
    Z80() = default;
    void     setData(uint8_t in)     { m_data = in; }
@@ -77,7 +80,9 @@ public:
    void  inc(uint8_t& reg)       { ++reg; }
    void  inc(uint16_t& reg)      { ++reg; }
    void  dec(uint16_t& reg)      { --reg; }
+   void  assign(uint8_t& rd, uint8_t& rs)   { rd = rs; }
    void  assign(uint16_t& rd, uint16_t& rs) { rd = rs; }
+   void  add(uint16_t& reg, uint8_t& offset){ reg += (int8_t)offset; }
    void  data_in(uint8_t& reg);
 
    void tick();

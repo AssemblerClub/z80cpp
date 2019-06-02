@@ -14,6 +14,15 @@ Z80::process_tstate (const TState& t) {
 void Z80::data_in(uint8_t& reg)  { reg = m_data;  }
 
 void 
+Z80::exe_JR_n() {
+   m_ops.addM23Read(m_reg.PC, m_data, TZ80Op(&Z80::inc, m_reg.PC));
+   m_ops.addM3alu(2, TZ80Op(&Z80::assign, m_reg.BUF, m_reg.PC));
+   m_ops.addM3alu(1, TZ80Op(&Z80::add,    m_reg.BUF, m_data));
+   m_ops.addM3alu(1, TZ80Op(&Z80::assign, m_reg.WZ,  m_reg.BUF));
+   m_ops.addM3alu(1, TZ80Op(&Z80::assign, m_reg.PC,  m_reg.WZ));   
+}
+
+void 
 Z80::exe_LD_r_n(uint8_t& reg) {
    m_ops.addM23Read(m_reg.PC, reg, TZ80Op(&Z80::inc, m_reg.PC));
 }
@@ -142,6 +151,9 @@ Z80::decode() {
       case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);break;
       case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L); break;
       case 0xD9: exe_EXX       ();            break;
+
+      // JUMP
+      case 0x18: exe_JR_n      ();            break;
 
       // 0x[0-3]1 [[ LD rp, nn ]]
       case 0x01: exe_LD_rp_nn  (rm.B , rm.C); break;
