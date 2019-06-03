@@ -15,71 +15,91 @@ const uint16_t S_WSMP   = (uint16_t)Signal::WSAMP;
 
 void 
 TVecOps::addM1() {
-   ops[last].set(S_M1                           , &cpureg.PC, nullptr, nullptr, TZ80Op(&Z80::inc, cpureg.PC));
+   Registers& r    = cpu.registers_r();
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();
+   
+   ops[last].set(S_M1                           , &r.PC, &data, TZ80Op(&Z80::inc, r.PC));
    inc(last);
-   ops[last].set(S_M1 | S_MREQ | S_RD | S_WSMP  , nullptr   , nullptr, nullptr, TZ80Op());
+   ops[last].set(S_M1 | S_MREQ | S_RD | S_WSMP  , &addr, &data, TZ80Op());
    inc(last);
-   ops[last].set(S_RFSH                         , &cpureg.IR, nullptr, nullptr, TZ80Op(&Z80::decode));
+   ops[last].set(S_RFSH                         , &r.IR, &data, TZ80Op(&Z80::decode));
    inc(last);
-   ops[last].set(S_MREQ | S_RFSH                , nullptr   , nullptr, nullptr, TZ80Op(&Z80::inc7, cpureg.R));
+   ops[last].set(S_MREQ | S_RFSH                , &addr, &data, TZ80Op(&Z80::inc7, r.R));
    inc(last);
 }
 
 void 
 TVecOps::addHALTNOP() {
-   ops[last].set(S_HALT | S_M1                         , &cpureg.PC, nullptr, nullptr, TZ80Op());
+   Registers& r    = cpu.registers_r();
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();
+
+   ops[last].set(S_HALT | S_M1                         , &r.PC, &data, TZ80Op());
    inc(last);
-   ops[last].set(S_HALT | S_M1 | S_MREQ | S_RD | S_WSMP, nullptr   , nullptr, nullptr, TZ80Op());
+   ops[last].set(S_HALT | S_M1 | S_MREQ | S_RD | S_WSMP, &addr, &data, TZ80Op());
    inc(last);
-   ops[last].set(S_HALT | S_RFSH                       , &cpureg.IR, nullptr, nullptr, TZ80Op());
+   ops[last].set(S_HALT | S_RFSH                       , &r.IR, &data, TZ80Op());
    inc(last);
-   ops[last].set(S_HALT | S_MREQ | S_RFSH              , nullptr   , nullptr, nullptr, TZ80Op(&Z80::inc7, cpureg.R));
+   ops[last].set(S_HALT | S_MREQ | S_RFSH              , &addr, &data, TZ80Op(&Z80::inc7, r.R));
    inc(last);
 }
 
 
 void 
-TVecOps::addM23Read(uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0) {
+TVecOps::addM23Read(uint16_t& read_addr, uint8_t& in_reg, TZ80Op&& t0) {
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();
+
    // Default Machine Re7ad Cycle (By default, reads from PC)
    //|      M2           |
    //| MREQ | WAIT| DIN  | 
    //|   RD |     |      | 
-   ops[last].set(0                     , &addr     , nullptr, nullptr, std::move(t0));
+   ops[last].set(0                     , &read_addr, &data, std::move(t0));
    inc(last);
-   ops[last].set(S_MREQ | S_RD | S_WSMP, nullptr   , nullptr, nullptr, TZ80Op());
+   ops[last].set(S_MREQ | S_RD | S_WSMP, &addr     , &data, TZ80Op());
    inc(last);
-   ops[last].set(0                     , nullptr   , nullptr, nullptr, TZ80Op(&Z80::data_in, in_reg));
+   ops[last].set(0                     , &addr     , &data, TZ80Op(&Z80::data_in, in_reg));
    inc(last);
 }
 
 void 
 TVecOps::addM3alu(uint8_t ts, TZ80Op&& tend) {
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();  
+
    while(--ts) {
-      ops[last].set(0, nullptr, nullptr, nullptr, TZ80Op());
+      ops[last].set(0, &addr, &data, TZ80Op());
       inc(last);
    }
-   ops[last].set(0, nullptr, nullptr, nullptr, std::move(tend));
+   ops[last].set(0, &addr, &data, std::move(tend));
    inc(last);
 }
 
 void 
-TVecOps::addM45Write(uint16_t& addr, uint8_t& data, TZ80Op&& t) {
+TVecOps::addM45Write(uint16_t& wr_addr, uint8_t& wr_data, TZ80Op&& t) {
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();  
+
    // Default Machine Write Cycle (By default, writes to (PC))
    //|      M3           |
    //| MREQ | WR  | DIN  | 
    //|     -DOUT-----    |
-   ops[last].set(0               , &addr   , nullptr  , nullptr, TZ80Op());
+   ops[last].set(0               , &wr_addr, &data    , TZ80Op());
    inc(last);
-   ops[last].set(S_MREQ | S_WSMP , nullptr , &data    , nullptr, std::move(t));
+   ops[last].set(S_MREQ | S_WSMP , &addr   , &wr_data , std::move(t));
    inc(last);
-   ops[last].set(S_MREQ | S_WR   , nullptr , nullptr  , nullptr, TZ80Op());
+   ops[last].set(S_MREQ | S_WR   , &addr   , &data    , TZ80Op());
    inc(last);
 }
 
 void 
 TVecOps::extendM(TZ80Op&& t) {
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();  
+
    // Extends current machine cycle with an extra waiting tstate
-   ops[last].set(0 , nullptr , nullptr , nullptr, std::move(t));
+   ops[last].set(0 , &addr , &data , std::move(t));
    inc(last);
 }
 

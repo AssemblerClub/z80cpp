@@ -203,31 +203,49 @@ struct TState {
          uint16_t  signals = 0;
    const uint16_t* addr    = nullptr; 
    const uint8_t*  data    = nullptr;
-   const uint8_t*  io      = nullptr;
           TZ80Op   op      = TZ80Op();
    TState() = default;
-   TState(uint16_t s, const uint16_t* a, const uint8_t* d, const uint8_t* i, TZ80Op&& o)
-      : signals(s), addr(a), data(d), io(i), op(std::move(o)) {}
-   void set(uint16_t s, const uint16_t* a, const uint8_t* d, const uint8_t* i, TZ80Op&& o) {
+   TState(uint16_t s, const uint16_t* a, const uint8_t* d, TZ80Op&& o)
+      : signals(s), addr(a), data(d), op(std::move(o)) {}
+   void set(uint16_t s, const uint16_t* a, const uint8_t* d, TZ80Op&& o) {
       signals = s; addr = a; data = d;
-      io = i; op = std::move(o);
+      op = std::move(o);
    }
 };
+
+//
+// Compiletime Bitwise checking that a unit 
+// greater than 0 is a power of 2
+// It requires to have only one bit on
+//
+constexpr bool isPowerOf2(uint8_t p) {
+   if (!p) return false;
+   while (p > 1) {
+      if (p & 1) return false;
+      p >>= 1;
+   }
+   return true;
+}
 
 //
 // TVecOps: Class for encapsulating a fixed-length 
 // vector of pending operations (t-states) to perform
 //
 class TVecOps {
-   static constexpr uint8_t length = 32;
-   std::array<TState, length> ops;
-   uint8_t next = 0;
-   uint8_t last = 0;
-   Registers& cpureg;
+   static constexpr uint8_t length = 32;  // Must be a power of 2!
+   static_assert(isPowerOf2(length));
    
-   inline void inc(uint8_t& v) { if(++v == length) v = 0;         }
+   std::array<TState, length> ops;        // Queue of T-state operations
+   uint8_t next = 0;                      // ID of next operation to be performed
+   uint8_t last = 0;                      // Last operation queued
+   Z80& cpu;                              // Access to the CPU status
+   
+   // Increment an ID accessing the array in a circular way 
+   // When ++ arrives at the length, it returns to 0. This
+   // Assumes length is a power of two to do modulus using AND
+   inline void inc(uint8_t& v) { v = ++v & (length-1); }
 public:
-   TVecOps(Registers& cr) : cpureg(cr) {}
+   TVecOps(Z80& c) : cpu(c) {}
    void addM1();
    void addHALTNOP();
    void addM23Read   (uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0 = TZ80Op());
