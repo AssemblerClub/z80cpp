@@ -62,6 +62,7 @@ struct TZ80Op {
       ,  _2PU8Ref
       ,  _2PU16Ref
       ,  _2PU16U8Ref
+      ,  _3PU8U16U16Ref
    };
    // Type aliases for function pointers
    using VOIDFp       = void(Z80::*)(void);
@@ -70,6 +71,7 @@ struct TZ80Op {
    using _2PU8RefFp   = void(Z80::*)(uint8_t&,uint8_t&);
    using _2PU16RefFp  = void(Z80::*)(uint16_t&,uint16_t&);
    using _2PU16U8RefFp = void(Z80::*)(uint16_t&,uint8_t&);
+   using _3PU8U16U16RefFp = void(Z80::*)(uint8_t&,uint16_t&,uint16_t&);
 
    // Explicit constructors for functions types
    explicit TZ80Op()                : m_type(Type::NOP) {} 
@@ -84,6 +86,8 @@ struct TZ80Op {
       : m_type(Type::_2PU16Ref), m_f2u16r(f), m_f2u16r_p1(&p1), m_f2u16r_p2(&p2) {}
    explicit TZ80Op( _2PU16U8RefFp f, uint16_t& p1, uint8_t& p2 ) 
       : m_type(Type::_2PU16U8Ref), m_f2u16u8r(f), m_f2u16u8r_p1(&p1), m_f2u16u8r_p2(&p2) {}
+   explicit TZ80Op( _3PU8U16U16RefFp f, uint8_t& p1, uint16_t& p2, uint16_t& p3 ) 
+      : m_type(Type::_3PU8U16U16Ref), m_f3u8u16u16r(f), m_f3u8u16u16r_p1(&p1), m_f3u8u16u16r_p2(&p2), m_f3u8u16u16r_p3(&p3) {}
 
    // Set new function and type
    void reset() {
@@ -121,6 +125,13 @@ struct TZ80Op {
       m_f2u16u8r_p1 = &p1;
       m_f2u16u8r_p2 = &p2;
    }
+   void set(_3PU8U16U16RefFp f, uint8_t& p1, uint16_t& p2, uint16_t& p3 ) { 
+      m_type = Type::_3PU8U16U16Ref;
+      m_f3u8u16u16r = f;
+      m_f3u8u16u16r_p1 = &p1;
+      m_f3u8u16u16r_p2 = &p2;
+      m_f3u8u16u16r_p3 = &p3;
+   }
 
    // Call contained function
    void operator()(Z80& cpu) const {
@@ -132,6 +143,7 @@ struct TZ80Op {
          case Type::_2PU8Ref:  (cpu.*m_f2u8r) (*m_f2u8r_p1, *m_f2u8r_p2); break;
          case Type::_2PU16Ref: (cpu.*m_f2u16r)(*m_f2u16r_p1, *m_f2u16r_p2); break;
          case Type::_2PU16U8Ref:(cpu.*m_f2u16u8r)(*m_f2u16u8r_p1, *m_f2u16u8r_p2); break;
+         case Type::_3PU8U16U16Ref:(cpu.*m_f3u8u16u16r)(*m_f3u8u16u16r_p1, *m_f3u8u16u16r_p2, *m_f3u8u16u16r_p3); break;
          case Type::NOP: break;         
       }
    }
@@ -170,6 +182,13 @@ private:
          _2PU16U8RefFp m_f2u16u8r;
          uint16_t*    m_f2u16u8r_p1;
          uint8_t*     m_f2u16u8r_p2;
+      };
+      // Type 6: void (Z80::*)(uint8_t&, uint16_t&, int16_t)
+      struct {
+         _3PU8U16U16RefFp m_f3u8u16u16r;
+         uint8_t*     m_f3u8u16u16r_p1;
+         uint16_t*    m_f3u8u16u16r_p2;
+         uint16_t*    m_f3u8u16u16r_p3;
       };
    };
 };
@@ -248,9 +267,10 @@ public:
    TVecOps(Z80& c) : cpu(c) {}
    void addM1();
    void addHALTNOP();
-   void addM23Read   (uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0 = TZ80Op());
-   void addM45Write  (uint16_t& addr, uint8_t& data, TZ80Op&& t = TZ80Op());
-   void addM3alu     (uint8_t ts, TZ80Op&& tend);
+   void addM23Read      (uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0 = TZ80Op());
+   void addM3ReadAssign (uint16_t& read_reg, uint8_t& in_reg, uint16_t& to_reg, uint16_t& from_reg);
+   void addM45Write     (uint16_t& addr, uint8_t& data, TZ80Op&& t = TZ80Op());
+   void addM3alu        (uint8_t ts, TZ80Op&& tend);
 
    void extendM(TZ80Op&& t = TZ80Op());
 

@@ -64,6 +64,23 @@ TVecOps::addM23Read(uint16_t& read_addr, uint8_t& in_reg, TZ80Op&& t0) {
 }
 
 void 
+TVecOps::addM3ReadAssign(uint16_t& read_reg, uint8_t& in_reg, uint16_t& to_reg, uint16_t& from_reg) {
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();
+
+   // Default Machine Re7ad Cycle (By default, reads from PC)
+   //|      M3           |
+   //| MREQ | WAIT| DIN  | 
+   //|   RD |     |      | 
+   ops[last].set(0                     , &read_reg , &data, TZ80Op(&Z80::inc, read_reg));
+   inc(last);
+   ops[last].set(S_MREQ | S_RD | S_WSMP, &addr     , &data, TZ80Op());
+   inc(last);
+   ops[last].set(0                     , &addr     , &data, TZ80Op(&Z80::data_in_assign, in_reg, to_reg, from_reg));
+   inc(last);
+}
+
+void 
 TVecOps::addM3alu(uint8_t ts, TZ80Op&& tend) {
    uint16_t&  addr = cpu.address_r();
    uint8_t&   data = cpu.data_r();  
