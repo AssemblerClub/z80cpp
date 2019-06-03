@@ -15,5 +15,5 @@ LD H, A
 LD L, A
 LD D, #0x55
 LD E, #0x66
-LD A, D
+LD A, D      ; A=0x55, BC=0x1122, DE=0x5566, HL=0x0000
 HALT
