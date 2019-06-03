@@ -13,6 +13,7 @@ class Printer;
 // Z80 CPU Class Declaration
 //
 class Z80 {
+   friend class TVecOps;
    using FNextM1 = void(TVecOps::*)();
 
    // Member variables
@@ -20,10 +21,9 @@ class Z80 {
    uint16_t   m_in_signals = 0;  // Only input signals (Positive logic (1=ON))
    uint16_t   m_address = 0;     // Address Bus information
    uint8_t    m_data    = 0;     // Data Bus information 
-   uint8_t    m_io      = 0;     // I/O Bus information
    uint64_t   m_ticks   = 0;     // Total ticks of operation transcurred
    Registers  m_reg;             // Register Banks
-   TVecOps    m_ops = TVecOps(m_reg);     // Queue of pending operations
+   TVecOps    m_ops = TVecOps(*this);     // Queue of pending operations
    FNextM1    m_nextM1 = &TVecOps::addM1; // Next M1 Cycle operation to perform (for halt situations)
 
    // Private member functions
@@ -60,6 +60,11 @@ class Z80 {
 
    // JUMP
    void  exe_JR_n ();
+
+   // Private API for friend class
+   Registers& registers_r() { return m_reg;     }
+   uint8_t&   data_r()      { return m_data;    }
+   uint16_t&  address_r()   { return m_address; }
 public:
    Z80() = default;
    void     setData(uint8_t in)     { m_data = in; }
@@ -85,7 +90,7 @@ public:
    void  add(uint16_t& reg, uint8_t& offset){ reg += (int8_t)offset; }
    void  data_in(uint8_t& reg);
 
-   void tick();
+   void  tick();
 };
 
 }; // Namespace Z80CPP

@@ -5,13 +5,12 @@ namespace Z80CPP {
 void
 Z80::process_tstate (const TState& t) {
    m_signals = t.signals | m_in_signals;
-   if (t.addr)        m_address = *t.addr;
-   if (t.data)        m_data    = *t.data;
-   if (t.io)          m_io      = *t.io;
-   if (!t.op.empty()) t.op(*this);
+   m_address = *t.addr;
+   m_data    = *t.data;
+   t.op(*this);
 }
 
-void Z80::data_in(uint8_t& reg)  { reg = m_data;  }
+void Z80::data_in(uint8_t& reg) { reg = m_data;  }
 
 void 
 Z80::exe_JR_n() {
