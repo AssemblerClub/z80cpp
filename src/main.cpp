@@ -32,10 +32,11 @@ public:
       // Simulate a simple bus that connects to Memory through
       // RD and WR signals
       if ( m_cpu.signal(Z80CPP::Signal::MREQ)) {
+         uint16_t addr = m_cpu.address();
          if        ( m_cpu.signal(Z80CPP::Signal::RD) ) {
-            m_cpu.setData( m_mem[ m_cpu.address() ] );
+            m_cpu.setData( m_mem[ addr ] );
          } else if ( m_cpu.signal(Z80CPP::Signal::WR) ) {
-            m_mem[ m_cpu.address() ] = m_cpu.data();
+            m_mem[ addr ] = m_cpu.data();
          }
       }
    }
