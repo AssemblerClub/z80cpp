@@ -21,7 +21,7 @@ public:
          static uint8_t wait = 2;
 
          // Activate WAIT signal
-         wait = ++wait & 0x3;
+         wait = (wait+1) & 0x3;
          if (wait) m_cpu.setSignal(Z80CPP::Signal::WAIT);
          else      m_cpu.rstSignal(Z80CPP::Signal::WAIT);
       }
@@ -56,7 +56,7 @@ public:
 
    void doNsteps(uint32_t steps) {
       uint64_t ticks = m_cpu.ticks();
-      Timer<uint64_t> t;
+      Z80CPP::Timer<uint64_t> t;
 
       do { 
          step(); 
@@ -86,7 +86,7 @@ public:
             uint16_t addr = 0;
             if ( !command.empty() ) 
                addr = std::stoul(command, nullptr, 0);
-            m_print.printMemoryContents(m_mem, m_cpu.address(), 3);
+            m_print.printMemoryContents(m_mem, addr, 3);
          }
       } while (token != "q");
    }

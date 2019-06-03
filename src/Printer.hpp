@@ -23,4 +23,4 @@ public:
    void  printMemoryContents  (const Memory& mem, uint16_t pos, uint16_t blocks);
 };
 
-}; // Namespace Z80CPP
+} // Namespace Z80CPP

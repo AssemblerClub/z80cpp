@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+namespace Z80CPP {
+
 template <typename UNIT>
 class Timer {
    using Clock  = std::chrono::high_resolution_clock;
@@ -22,3 +24,5 @@ public:
    UNIT     us()   const   { return passed() * 1000000;    }
    UNIT     ns()   const   { return passed() * 1000000000; }
 };
+
+} // Namespace Z80CPP

@@ -20,4 +20,4 @@ public:
    uint16_t size() const { return m_size; }
 };
 
-}; // Namespace Z80CPP
+} // Namespace Z80CPP

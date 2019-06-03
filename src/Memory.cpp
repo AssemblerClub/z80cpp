@@ -20,4 +20,4 @@ Memory::get(uint16_t pos) const {
    return m_bytes[pos];
 }
 
-}; // Namespace Z80CPP
+} // Namespace Z80CPP

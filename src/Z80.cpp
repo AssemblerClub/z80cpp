@@ -280,4 +280,4 @@ Z80::tick() {
    ++m_ticks;
 }
 
-}; // Namespace Z80CPP
+} // Namespace Z80CPP

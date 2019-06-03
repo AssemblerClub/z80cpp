@@ -262,7 +262,7 @@ class TVecOps {
    // Increment an ID accessing the array in a circular way 
    // When ++ arrives at the length, it returns to 0. This
    // Assumes length is a power of two to do modulus using AND
-   inline void inc(uint8_t& v) { v = ++v & (length-1); }
+   inline void inc(uint8_t& v) { v = (v+1) & (length-1); }
 public:
    TVecOps(Z80& c) : cpu(c) {}
    void addM1();
