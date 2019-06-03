@@ -10,7 +10,12 @@ Z80::process_tstate (const TState& t) {
    t.op(*this);
 }
 
-void Z80::data_in(uint8_t& reg) { reg = m_data;  }
+void 
+Z80::exe_JP_nn() {
+   m_ops.addM23Read     (m_reg.PC, m_reg.Z, TZ80Op(&Z80::inc, m_reg.PC));
+   m_ops.addM3ReadAssign(m_reg.PC, m_reg.W, m_reg.PC, m_reg.WZ);
+} 
+
 
 void 
 Z80::exe_JR_n() {
@@ -145,59 +150,40 @@ Z80::decode() {
    // Instruction jump table   
    switch( m_data ) {
       // Basics
-      case 0x00: exe_NOP       ();            break;
-      case 0x08: exe_EX_rp_rp  (rm.AF, ra.AF);break;
-      case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);break;
-      case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L); break;
-      case 0xD9: exe_EXX       ();            break;
+      case 0x00: exe_NOP      ();            break;
+      case 0x01: exe_LD_rp_nn (rm.B , rm.C); break;
+      case 0x02: exe_LD_IrpI_r(rm.BC, rm.A); break;
+      case 0x03: exe_INC_rp   (rm.BC);       break;
+      case 0x06: exe_LD_r_n   (rm.B );       break;
+      case 0x08: exe_EX_rp_rp (rm.AF, ra.AF);break;
+      case 0x0A: exe_LD_r_IrpI(rm.A ,rm.BC); break;
+      case 0x0B: exe_DEC_rp   (rm.BC);       break;
+      case 0x0E: exe_LD_r_n   (rm.C );       break;
 
-      // JUMP
-      case 0x18: exe_JR_n      ();            break;
+      case 0x11: exe_LD_rp_nn (rm.D , rm.E); break;
+      case 0x12: exe_LD_IrpI_r(rm.DE, rm.A); break;
+      case 0x13: exe_INC_rp   (rm.DE);       break;
+      case 0x16: exe_LD_r_n   (rm.D );       break;
+      case 0x18: exe_JR_n     ();            break;
+      case 0x1A: exe_LD_r_IrpI(rm.A ,rm.DE); break;
+      case 0x1B: exe_DEC_rp   (rm.DE);       break;
+      case 0x1E: exe_LD_r_n   (rm.E );       break;
 
-      // 0x[0-3]1 [[ LD rp, nn ]]
-      case 0x01: exe_LD_rp_nn  (rm.B , rm.C); break;
-      case 0x11: exe_LD_rp_nn  (rm.D , rm.E); break;
-      case 0x21: exe_LD_rp_nn  (rm.H , rm.L); break;
-      case 0x31: exe_LD_rp_nn  ( r.S ,  r.P); break;
+      case 0x21: exe_LD_rp_nn  (rm.H , rm.L);break;
+      case 0x22: exe_LD_InnI_rp(rm.H , rm.L);break;
+      case 0x23: exe_INC_rp    (rm.HL);      break;
+      case 0x26: exe_LD_r_n    (rm.H );      break;
+      case 0x2A: exe_LD_rp_InnI(rm.H , rm.L);break;
+      case 0x2B: exe_DEC_rp    (rm.HL);      break;
+      case 0x2E: exe_LD_r_n    (rm.L );      break;
 
-      // 0x[0-1]A [[ LD a, (rp) ]]
-      case 0x0A: exe_LD_r_IrpI (rm.A ,rm.BC); break;
-      case 0x1A: exe_LD_r_IrpI (rm.A ,rm.DE); break;
-      // 0x2A [[ LD hl, (nn) ]]
-      case 0x2A: exe_LD_rp_InnI(rm.H , rm.L); break;
-      // 0x3A [[ LD  a, (nn) ]]
-      case 0x3A: exe_LD_r_InnI (rm.A);        break;
-
-      // 0x[0-1]2 [[ LD (rp), r ]] 
-      case 0x02: exe_LD_IrpI_r (rm.BC, rm.A); break;
-      case 0x12: exe_LD_IrpI_r (rm.DE, rm.A); break;
-      // 0x[2-3]2 [[ LD (nn), rp/r ]] 
-      case 0x22: exe_LD_InnI_rp(rm.H , rm.L); break;
-      case 0x32: exe_LD_InnI_r (rm.A);        break;
-
-      // 0x[0-4]3 [[ inc rp ]] 
-      case 0x03: exe_INC_rp (rm.BC); break;
-      case 0x13: exe_INC_rp (rm.DE); break;
-      case 0x23: exe_INC_rp (rm.HL); break;
-      case 0x33: exe_INC_rp ( r.SP); break;
-
-      // 0x[0-4]B [[ dec rp ]] 
-      case 0x0B: exe_DEC_rp (rm.BC); break;
-      case 0x1B: exe_DEC_rp (rm.DE); break;
-      case 0x2B: exe_DEC_rp (rm.HL); break;
-      case 0x3B: exe_DEC_rp ( r.SP); break;
-
-
-      // 0x[0-3][6|E] [[ LD r, n ]] 
-      case 0x06: exe_LD_r_n   (rm.B ); break;
-      case 0x16: exe_LD_r_n   (rm.D ); break;
-      case 0x26: exe_LD_r_n   (rm.H ); break;
-      case 0x0E: exe_LD_r_n   (rm.C ); break;
-      case 0x1E: exe_LD_r_n   (rm.E ); break;
-      case 0x2E: exe_LD_r_n   (rm.L ); break;
-      case 0x3E: exe_LD_r_n   (rm.A ); break;
-      // 0x[36] [[ LD (HL), n ]] 
-      case 0x36: exe_LD_IrpI_n(rm.HL); break;
+      case 0x31: exe_LD_rp_nn  ( r.S ,  r.P);break;
+      case 0x32: exe_LD_InnI_r (rm.A);       break;
+      case 0x33: exe_INC_rp    ( r.SP);      break;
+      case 0x36: exe_LD_IrpI_n (rm.HL);      break;
+      case 0x3A: exe_LD_r_InnI (rm.A);       break;
+      case 0x3B: exe_DEC_rp    ( r.SP);      break;
+      case 0x3E: exe_LD_r_n    (rm.A );      break;
 
       // 0x40-0x47 [[ LD B, r ]]
       case 0x40: exe_LD_r_r   (rm.B, rm.B ); break;
@@ -254,14 +240,14 @@ Z80::decode() {
       case 0x6E: exe_LD_r_IrpI(rm.L, rm.HL); break;
       case 0x6F: exe_LD_r_r   (rm.L, rm.A ); break;
       // 0x70-0x77 [[ LD (HL), r ]]
-      case 0x70: exe_LD_IrpI_r(rm.HL, rm.B ); break;
-      case 0x71: exe_LD_IrpI_r(rm.HL, rm.C ); break;
-      case 0x72: exe_LD_IrpI_r(rm.HL, rm.D ); break;
-      case 0x73: exe_LD_IrpI_r(rm.HL, rm.E ); break;
-      case 0x74: exe_LD_IrpI_r(rm.HL, rm.H ); break;
-      case 0x75: exe_LD_IrpI_r(rm.HL, rm.L ); break;
+      case 0x70: exe_LD_IrpI_r(rm.HL, rm.B );break;
+      case 0x71: exe_LD_IrpI_r(rm.HL, rm.C );break;
+      case 0x72: exe_LD_IrpI_r(rm.HL, rm.D );break;
+      case 0x73: exe_LD_IrpI_r(rm.HL, rm.E );break;
+      case 0x74: exe_LD_IrpI_r(rm.HL, rm.H );break;
+      case 0x75: exe_LD_IrpI_r(rm.HL, rm.L );break;
       case 0x76: exe_HALT();                 break;
-      case 0x77: exe_LD_IrpI_r(rm.HL, rm.A ); break;
+      case 0x77: exe_LD_IrpI_r(rm.HL, rm.A );break;
       // 0x78-0x7F [[ LD A, r ]]
       case 0x78: exe_LD_r_r   (rm.A, rm.B ); break;
       case 0x79: exe_LD_r_r   (rm.A, rm.C ); break;
@@ -272,8 +258,11 @@ Z80::decode() {
       case 0x7E: exe_LD_r_IrpI(rm.A, rm.HL); break;
       case 0x7F: exe_LD_r_r   (rm.A, rm.A ); break;
 
-      // 0xF9
-      case 0xF9: exe_LD_rp_rp (r.SP, rm.HL); break;
+      case 0xC3: exe_JP_nn     ();                 break;
+      case 0xD9: exe_EXX       ();                 break;
+      case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L);break;
+      case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);     break;
+      case 0xF9: exe_LD_rp_rp  ( r.SP, rm.HL);     break;
    }
 }
 

@@ -60,6 +60,7 @@ class Z80 {
 
    // JUMP
    void  exe_JR_n ();
+   void  exe_JP_nn();
 
    // Private API for friend class
    Registers& registers_r() { return m_reg;     }
@@ -87,8 +88,9 @@ public:
    void  dec(uint16_t& reg)      { --reg; }
    void  assign(uint8_t& rd, uint8_t& rs)   { rd = rs; }
    void  assign(uint16_t& rd, uint16_t& rs) { rd = rs; }
+   void  data_in(uint8_t& reg)   { reg = m_data;  }
+   void  data_in_assign(uint8_t& rin, uint16_t& rd, uint16_t& rs) { data_in(rin); assign(rd, rs); }
    void  add(uint16_t& reg, uint8_t& offset){ reg += (int8_t)offset; }
-   void  data_in(uint8_t& reg);
 
    void  tick();
 };
