@@ -69,6 +69,11 @@ public:
       std::cout << ticks*1000000000/ns << " MHZ: " << (float)ticks*1000/ns << "\n";
    }
 
+   void autorun(uint32_t ticks) {
+      doNsteps(ticks);
+      printStatus();
+   }
+
    void run() {
       std::string command;
       std::string token;
@@ -121,17 +126,20 @@ public:
 
 void usage() {
    std::cerr << "USAGE:\n";
-   std::cerr << "   z80emu [binfile]\n\n";
+   std::cerr << "   z80emu <binfile> [ticks]\n\n";
    exit(1);
 }
 
 int main(int argc, char*argv[]) {
-   if (argc != 2)
+   if (argc < 2 || argc > 3)
       usage();
 
    Computer K;
    K.loadbin(argv[1], 0, 0);
-   K.run();
+   if (argc == 3)
+      K.autorun(std::atoi(argv[2]));
+   else
+      K.run();
 
    return 0;
 }
