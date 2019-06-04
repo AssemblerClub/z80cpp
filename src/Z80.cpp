@@ -276,7 +276,14 @@ Z80::tick() {
 
    // Now process next T-state in pending operations
    process_tstate( m_ops.get() );
-   m_ops.pop( m_signals & (uint16_t)Signal::WAIT );
+   
+   // If we are on a T-state that samples WAIT signal (WSAMP)
+   // And WAIT signal is activated, we should repeat this 
+   // T-state until WAIT goes OFF
+   if ( !signal(Signal::WSAMP) || !signal(Signal::WAIT))
+      m_ops.pop();
+   
+   // One more clock tick has passed (0.25 us at 4 Mhz)
    ++m_ticks;
 }
 

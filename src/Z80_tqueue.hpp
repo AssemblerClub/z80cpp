@@ -274,14 +274,10 @@ public:
 
    void extendM(TZ80Op&& t = TZ80Op());
 
-
-   void add(TState& newop)       { ops[last] = newop; inc(last);        }
-   const TState&  get()          { return ops[next];                    }
-   void  pop(bool WAIT) { 
-      if ( !WAIT || !(ops[next].signals & (uint16_t)Signal::WSAMP) ) 
-         inc(next);
-   }
-   bool           empty()        { return next == last;                 }
+   void add(TState& newop) { ops[last] = newop; inc(last);  }
+   const TState&  get()    { return ops[next];              }
+   void pop()              { inc(next);                     }
+   bool empty()            { return next == last;           }
 };
 
 } // Namespace Z80CPP
