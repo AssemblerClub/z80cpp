@@ -11,6 +11,11 @@ Z80::process_tstate (const TState& t) {
 }
 
 void 
+Z80::exe_JP_IrpI(uint16_t& reg) {
+   m_reg.PC = reg;
+}
+
+void 
 Z80::exe_JP_nn() {
    m_ops.addM23Read     (m_reg.PC, m_reg.Z, TZ80Op(&Z80::inc, m_reg.PC));
    m_ops.addM3ReadAssign(m_reg.PC, m_reg.W, m_reg.PC, m_reg.WZ);
@@ -261,6 +266,7 @@ Z80::decode() {
       case 0xC3: exe_JP_nn     ();                 break;
       case 0xD9: exe_EXX       ();                 break;
       case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L);break;
+      case 0xE9: exe_JP_IrpI   (rm.HL);            break;
       case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);     break;
       case 0xF9: exe_LD_rp_rp  ( r.SP, rm.HL);     break;
    }

@@ -61,6 +61,7 @@ class Z80 {
    // JUMP
    void  exe_JR_n ();
    void  exe_JP_nn();
+   void  exe_JP_IrpI(uint16_t& reg);
 
    // Private API for friend class
    Registers& registers_r() { return m_reg;     }
