@@ -8,10 +8,10 @@ Z80::exe_JP_IrpI(uint16_t& reg) {
 }
 
 void 
-Z80::exe_PUSH_rp(uint16_t& reg) {
+Z80::exe_PUSH_rp(uint8_t& rhi, uint8_t& rlo) {
    m_ops.extendM    ( TZ80Op(&Z80::dec, m_reg.SP) );
-   m_ops.addM45Write( m_reg.SP, m_reg.main.A, TZ80Op(&Z80::dec, m_reg.SP) );
-   m_ops.addM45Write( m_reg.SP, m_reg.main.F ); 
+   m_ops.addM45Write( m_reg.SP, rhi, TZ80Op(&Z80::dec, m_reg.SP) );
+   m_ops.addM45Write( m_reg.SP, rlo ); 
 }
 
 
@@ -264,11 +264,18 @@ Z80::decode() {
       case 0x7F: exe_LD_r_r   (rm.A, rm.A ); break;
 
       case 0xC3: exe_JP_nn     ();                 break;
+      case 0xC5: exe_PUSH_rp   ( rm.B, rm.C);      break;
+      
+      case 0xD5: exe_PUSH_rp   ( rm.D, rm.E);      break;
       case 0xD9: exe_EXX       ();                 break;
+      
       case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L);break;
+      case 0xE5: exe_PUSH_rp   ( rm.H, rm.L);      break;
+      
       case 0xE9: exe_JP_IrpI   (rm.HL);            break;
       case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);     break;
-      case 0xF5: exe_PUSH_rp   (rm.AF);            break;
+      
+      case 0xF5: exe_PUSH_rp   ( rm.A, rm.F);      break;
       case 0xF9: exe_LD_rp_rp  ( r.SP, rm.HL);     break;
    }
 }
