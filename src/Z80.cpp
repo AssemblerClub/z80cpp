@@ -2,18 +2,18 @@
 
 namespace Z80CPP {
 
-void
-Z80::process_tstate (const TState& t) {
-   m_signals = t.signals | m_in_signals;
-   m_address = *t.addr;
-   m_data    = *t.data;
-   t.op(*this);
-}
-
 void 
 Z80::exe_JP_IrpI(uint16_t& reg) {
    m_reg.PC = reg;
 }
+
+void 
+Z80::exe_PUSH_rp(uint16_t& reg) {
+   m_ops.extendM    ( TZ80Op(&Z80::dec, m_reg.SP) );
+   m_ops.addM45Write( m_reg.SP, m_reg.main.A, TZ80Op(&Z80::dec, m_reg.SP) );
+   m_ops.addM45Write( m_reg.SP, m_reg.main.F ); 
+}
+
 
 void 
 Z80::exe_JP_nn() {
@@ -268,6 +268,7 @@ Z80::decode() {
       case 0xE3: exe_EX_ISPI_rp(rm.HL, rm.H, rm.L);break;
       case 0xE9: exe_JP_IrpI   (rm.HL);            break;
       case 0xEB: exe_EX_rp_rp  (rm.DE, rm.HL);     break;
+      case 0xF5: exe_PUSH_rp   (rm.AF);            break;
       case 0xF9: exe_LD_rp_rp  ( r.SP, rm.HL);     break;
    }
 }
@@ -281,13 +282,18 @@ Z80::tick() {
       (m_ops.*m_nextM1)();
 
    // Now process next T-state in pending operations
-   process_tstate( m_ops.get() );
+   const TState& t = m_ops.get();
+   m_signals = t.signals | m_in_signals;
+   m_address = *t.addr;
+   m_data    = *t.data;
    
    // If we are on a T-state that samples WAIT signal (WSAMP)
    // And WAIT signal is activated, we should repeat this 
    // T-state until WAIT goes OFF
-   if ( !signal(Signal::WSAMP) || !signal(Signal::WAIT))
+   if ( !signal(Signal::WSAMP) || !signal(Signal::WAIT)) {
       m_ops.pop();
+      t.op(*this);
+   }
    
    // One more clock tick has passed (0.25 us at 4 Mhz)
    ++m_ticks;

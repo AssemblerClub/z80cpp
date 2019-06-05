@@ -28,9 +28,6 @@ class Z80 {
 
    // Private member functions
 
-   // Z80 T-state processing operations
-   void  process_tstate (const TState& t);
-
    void  read2BytesFrom(uint8_t& rdhi, uint8_t& rdlo, uint16_t& rs16);
 
    // Z80 Instructions (Execution)
@@ -57,6 +54,9 @@ class Z80 {
    // INC/DEC
    void  exe_INC_rp (uint16_t& reg);
    void  exe_DEC_rp (uint16_t& reg);
+
+   // PUSH/POP
+   void  exe_PUSH_rp(uint16_t& reg);
 
    // JUMP
    void  exe_JR_n ();
