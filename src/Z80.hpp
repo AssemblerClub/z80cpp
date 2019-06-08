@@ -57,6 +57,7 @@ class Z80 {
 
    // PUSH/POP
    void  exe_PUSH_rp(uint8_t& rhi, uint8_t& rlo);
+   void  exe_POP_rp (uint8_t& rhi, uint8_t& rlo);
 
    // JUMP
    void  exe_JR_n ();
