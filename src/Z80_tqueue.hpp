@@ -269,6 +269,7 @@ public:
    void addHALTNOP();
    void addM23Read      (uint16_t& addr, uint8_t& in_reg, TZ80Op&& t0 = TZ80Op());
    void addM3ReadAssign (uint16_t& read_reg, uint8_t& in_reg, uint16_t& to_reg, uint16_t& from_reg);
+   void addM45Read      (uint16_t& read_addr, uint8_t& in_reg, TZ80Op&& t);
    void addM45Write     (uint16_t& addr, uint8_t& data, TZ80Op&& t = TZ80Op());
    void addM3alu        (uint8_t ts, TZ80Op&& tend);
 

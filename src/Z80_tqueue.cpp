@@ -59,7 +59,7 @@ TVecOps::addM23Read(uint16_t& read_addr, uint8_t& in_reg, TZ80Op&& t0) {
    inc(last);
    ops[last].set(S_MREQ | S_RD | S_WSMP, &addr     , &data, TZ80Op());
    inc(last);
-   ops[last].set(0                     , &addr     , &data, TZ80Op(&Z80::data_in, in_reg));
+   ops[last].set(S_MREQ | S_RD         , &addr     , &data, TZ80Op(&Z80::data_in, in_reg));
    inc(last);
 }
 
@@ -109,6 +109,20 @@ TVecOps::addM45Write(uint16_t& wr_addr, uint8_t& wr_data, TZ80Op&& t) {
    ops[last].set(S_MREQ | S_WR   , &addr   , &data    , TZ80Op());
    inc(last);
 }
+
+void 
+TVecOps::addM45Read(uint16_t& read_addr, uint8_t& in_reg, TZ80Op&& t) {
+   uint16_t&  addr = cpu.address_r();
+   uint8_t&   data = cpu.data_r();  
+
+   ops[last].set(0                     , &read_addr, &data, TZ80Op());
+   inc(last);
+   ops[last].set(S_MREQ | S_RD | S_WSMP, &addr     , &data, std::move(t));
+   inc(last);
+   ops[last].set(S_MREQ | S_RD         , &addr     , &data, TZ80Op(&Z80::data_in, in_reg));
+   inc(last);
+}
+
 
 void 
 TVecOps::extendM(TZ80Op&& t) {
